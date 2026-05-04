@@ -18,6 +18,7 @@
       --muted: #6b6b80;
       --green: #4ade80;
       --red: #f87171;
+      --orange: #fb923c;
       --r: 14px;
     }
 
@@ -35,52 +36,28 @@
     /* ── Header ── */
     header {
       padding: 52px 20px 12px;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 10;
+      position: sticky; top: 0;
+      background: var(--bg); z-index: 10;
     }
     header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
     header h1 span { color: var(--accent); }
     .stats { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
 
     /* Filter bar */
-    .filter-bar {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding: 10px 0 2px;
-      scrollbar-width: none;
-    }
+    .filter-bar { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; }
     .filter-bar::-webkit-scrollbar { display: none; }
     .filter-bar:empty { display: none; }
     .filter-tag {
-      font-size: 0.8rem;
-      padding: 4px 12px;
-      border-radius: 100px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
+      font-size: 0.8rem; padding: 4px 12px; border-radius: 100px;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      cursor: pointer; white-space: nowrap; flex-shrink: 0;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .filter-tag.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-      border-color: var(--accent);
-    }
+    .filter-tag.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
 
     /* ── List ── */
-    #list {
-      flex: 1;
-      padding: 8px 16px 120px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+    #list { flex: 1; padding: 8px 16px 120px; display: flex; flex-direction: column; gap: 8px; }
     .empty-state {
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; gap: 12px; padding: 80px 0;
@@ -89,23 +66,20 @@
 
     /* ── Todo item ── */
     .todo-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      padding: 12px 12px 12px 8px;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 12px 12px 12px 8px;
+      display: flex; align-items: flex-start; gap: 8px;
+      transition: border-color 0.2s;
     }
     .todo-item.closed { opacity: 0.45; }
     .todo-item.drag-source { opacity: 0; pointer-events: none; }
+    .todo-item.overdue:not(.closed) { border-color: rgba(248,113,113,0.35); }
 
     /* Drag handle */
     .drag-handle {
-      color: var(--muted); padding: 3px 4px;
-      cursor: grab; flex-shrink: 0; margin-top: 2px;
-      touch-action: none;
-      -webkit-user-select: none; user-select: none;
+      color: var(--muted); padding: 3px 4px; cursor: grab;
+      flex-shrink: 0; margin-top: 2px;
+      touch-action: none; -webkit-user-select: none; user-select: none;
     }
     .drag-handle:active { cursor: grabbing; }
 
@@ -124,10 +98,7 @@
 
     /* Item body */
     .item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-
-    .item-main {
-      display: flex; align-items: flex-start; gap: 6px; min-height: 24px;
-    }
+    .item-main { display: flex; align-items: flex-start; gap: 6px; min-height: 24px; }
     .todo-text {
       flex: 1; font-size: 0.97rem; line-height: 1.45;
       word-break: break-word; cursor: pointer; padding-top: 2px;
@@ -136,21 +107,30 @@
 
     /* Progress ring */
     .prog-ring-wrap { flex-shrink: 0; margin-top: 1px; }
-    .ring-fill {
-      transition: stroke-dasharray 0.4s cubic-bezier(0.4,0,0.2,1), stroke 0.3s;
-    }
+    .ring-fill { transition: stroke-dasharray 0.4s cubic-bezier(0.4,0,0.2,1), stroke 0.3s; }
     .ring-pct { -webkit-user-select: none; user-select: none; }
 
     .collapse-btn {
-      background: transparent; border: none;
-      color: var(--muted); cursor: pointer;
-      padding: 2px; flex-shrink: 0;
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; padding: 2px; flex-shrink: 0;
       display: flex; align-items: center;
-      -webkit-tap-highlight-color: transparent;
-      margin-top: 3px;
+      -webkit-tap-highlight-color: transparent; margin-top: 3px;
     }
     .collapse-btn svg { transition: transform 0.2s; transform: rotate(180deg); }
     .todo-item.collapsed .collapse-btn svg { transform: rotate(0deg); }
+
+    /* Due date chips */
+    .item-due { padding-top: 5px; }
+    .due-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.72rem; font-weight: 500;
+      padding: 2px 7px; border-radius: 100px;
+      white-space: nowrap;
+    }
+    .due-upcoming { color: var(--muted); background: var(--surface-hi); }
+    .due-today    { color: var(--orange); background: rgba(251,146,60,0.12); }
+    .due-overdue  { color: var(--red);    background: rgba(248,113,113,0.12); }
+    .due-sm { font-size: 0.68rem; padding: 1px 5px; }
 
     /* Details section */
     .item-details { padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
@@ -163,27 +143,16 @@
       background: var(--accent-dim); color: var(--accent); font-weight: 500;
     }
 
-    /* ── Subtasks in card ── */
-    .subtask-list {
-      display: flex; flex-direction: column; gap: 2px;
-      border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px;
-    }
-    .subtask-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 3px 0; border-radius: 6px;
-    }
+    /* Subtasks in card */
+    .subtask-list { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; }
+    .subtask-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-radius: 6px; }
     .subtask-row.drag-source { opacity: 0; pointer-events: none; }
 
-    /* Subtask drag handle */
     .st-drag {
-      color: var(--muted); padding: 2px 3px;
-      cursor: grab; flex-shrink: 0;
-      touch-action: none;
-      -webkit-user-select: none; user-select: none;
-      opacity: 0.5;
+      color: var(--muted); padding: 2px 3px; cursor: grab; flex-shrink: 0;
+      touch-action: none; -webkit-user-select: none; user-select: none; opacity: 0.5;
     }
     .st-drag:active { cursor: grabbing; }
-    @media (hover: none) { .st-drag { opacity: 0.4; } }
 
     .subtask-chk {
       width: 18px; height: 18px; border-radius: 50%;
@@ -255,15 +224,9 @@
       padding-bottom: env(safe-area-inset-bottom);
     }
     .sheet.open { transform: translateX(-50%) translateY(0); }
-    .sheet-grip {
-      width: 36px; height: 4px; background: var(--border);
-      border-radius: 2px; margin: 12px auto 0;
-    }
+    .sheet-grip { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
     .sheet-inner { padding: 16px 20px 24px; }
-    .sheet-header {
-      display: flex; align-items: center;
-      justify-content: space-between; margin-bottom: 20px;
-    }
+    .sheet-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .sheet-header h2 { font-size: 1.1rem; font-weight: 600; }
     .sheet-close-btn {
       background: var(--surface-hi); border: none; color: var(--muted);
@@ -271,6 +234,7 @@
       font-size: 0.85rem; display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
+
     .field-group { margin-bottom: 18px; }
     .field-label {
       font-size: 0.75rem; font-weight: 600; color: var(--muted);
@@ -279,19 +243,23 @@
     }
     .optional { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.75rem; opacity: 0.65; }
 
-    .sheet input[type="text"], .sheet textarea {
+    .sheet input[type="text"],
+    .sheet input[type="date"],
+    .sheet textarea {
       width: 100%; background: var(--bg); border: 1px solid var(--border);
       border-radius: 10px; color: var(--text); font-size: 0.97rem;
       padding: 11px 14px; outline: none; font-family: inherit;
       -webkit-appearance: none; transition: border-color 0.15s;
     }
     .sheet textarea { resize: vertical; }
-    .sheet input[type="text"]:focus, .sheet textarea:focus { border-color: var(--accent); }
+    .sheet input[type="date"] { color-scheme: dark; }
+    .sheet input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; filter: invert(0.6); }
+    .sheet input:focus, .sheet textarea:focus { border-color: var(--accent); }
     .sheet input::placeholder, .sheet textarea::placeholder { color: var(--muted); }
 
     .seg-ctrl {
-      display: flex; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px;
+      display: flex; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 3px; gap: 3px;
     }
     .seg-btn {
       flex: 1; padding: 8px; border: none; background: transparent;
@@ -312,25 +280,19 @@
       background: var(--accent-dim); color: var(--accent);
       font-size: 0.78rem; padding: 3px 8px; border-radius: 100px; font-weight: 500;
     }
-    .tag-remove {
-      background: none; border: none; color: var(--accent);
-      cursor: pointer; font-size: 1rem; line-height: 1; padding: 0; opacity: 0.7;
-    }
+    .tag-remove { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0; opacity: 0.7; }
     .tag-remove:hover { opacity: 1; }
-    #tag-input {
-      width: 100%; background: transparent; border: none;
-      color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit;
-    }
+    #tag-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit; }
     #tag-input::placeholder { color: var(--muted); }
 
     /* Subtasks in sheet */
-    #sheet-subtasks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    #sheet-subtasks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
     .sheet-sub-row {
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: flex-start; gap: 8px;
       background: var(--bg); border-radius: 8px; padding: 8px 10px;
     }
     .sheet-sub-chk {
-      width: 20px; height: 20px; border-radius: 50%;
+      width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
       border: 1.5px solid var(--border); background: transparent;
       cursor: pointer; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -340,14 +302,24 @@
     .sheet-sub-chk svg { display: none; }
     .sheet-sub-row.done .sheet-sub-chk { border-color: var(--green); background: var(--green); }
     .sheet-sub-row.done .sheet-sub-chk svg { display: block; }
-    .sheet-sub-text { flex: 1; font-size: 0.9rem; }
+
+    .sheet-sub-body { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .sheet-sub-text { font-size: 0.9rem; line-height: 1.4; }
     .sheet-sub-row.done .sheet-sub-text { text-decoration: line-through; color: var(--muted); }
-    .sheet-sub-del {
-      background: none; border: none; color: var(--muted);
-      cursor: pointer; font-size: 1.1rem; padding: 0 2px; line-height: 1;
-      -webkit-tap-highlight-color: transparent;
+
+    .sheet-sub-date {
+      font-size: 0.78rem; padding: 4px 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--muted); font-family: inherit;
+      outline: none; color-scheme: dark; width: auto; max-width: 160px;
+      transition: border-color 0.15s; -webkit-appearance: none;
     }
+    .sheet-sub-date:focus { border-color: var(--accent); color: var(--text); }
+    .sheet-sub-date::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; filter: invert(0.6); }
+
+    .sheet-sub-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0 2px; line-height: 1; margin-top: 1px; flex-shrink: 0; }
     .sheet-sub-del:hover { color: var(--red); }
+
     .sheet-sub-add { display: flex; gap: 8px; align-items: center; }
     .sheet-sub-add input {
       flex: 1; background: var(--bg); border: 1px solid var(--border);
@@ -409,10 +381,12 @@
         <h2>Edit task</h2>
         <button id="sheet-close" class="sheet-close-btn" aria-label="Close">✕</button>
       </div>
+
       <div class="field-group">
         <div class="field-label">Title</div>
         <input id="edit-title" type="text" maxlength="280" />
       </div>
+
       <div class="field-group">
         <div class="field-label">Status</div>
         <div class="seg-ctrl" id="status-ctrl">
@@ -420,10 +394,17 @@
           <button class="seg-btn" data-val="closed">Closed</button>
         </div>
       </div>
+
+      <div class="field-group">
+        <div class="field-label">Due Date <span class="optional">optional</span></div>
+        <input id="edit-due" type="date" />
+      </div>
+
       <div class="field-group">
         <div class="field-label">Summary <span class="optional">optional</span></div>
         <textarea id="edit-summary" rows="3" placeholder="Add more context…"></textarea>
       </div>
+
       <div class="field-group">
         <div class="field-label">Tags <span class="optional">optional · one word each</span></div>
         <div class="tags-wrap">
@@ -432,6 +413,7 @@
             maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="off" />
         </div>
       </div>
+
       <div class="field-group">
         <div class="field-label">Subtasks <span class="optional">optional</span></div>
         <div id="sheet-subtasks"></div>
@@ -444,6 +426,7 @@
           </button>
         </div>
       </div>
+
       <div class="sheet-actions">
         <button id="sheet-delete" class="btn-delete">Delete</button>
         <button id="sheet-save" class="btn-save">Save</button>
@@ -458,7 +441,7 @@
     let editId        = null;
     let drag          = null;
     let subtaskDrag   = null;
-    let activeTags    = new Set();   // multi-select
+    let activeTags    = new Set();
     let sheetTags     = [];
     let sheetStatus   = 'open';
     let sheetSubtasks = [];
@@ -469,10 +452,15 @@
         const raw = JSON.parse(localStorage.getItem(KEY)) || [];
         return raw.map(t => {
           if (t.status === undefined) t.status = t.done ? 'closed' : 'open';
-          if (!t.tags)     t.tags     = [];
-          if (!t.subtasks) t.subtasks = [];
+          if (!t.tags)      t.tags      = [];
+          if (!t.subtasks)  t.subtasks  = [];
           if (t.summary  == null) t.summary  = '';
           if (t.collapsed == null) t.collapsed = false;
+          if (t.dueDate  == null) t.dueDate  = null;
+          t.subtasks = t.subtasks.map(s => {
+            if (s.dueDate == null) s.dueDate = null;
+            return s;
+          });
           delete t.done;
           return t;
         });
@@ -484,11 +472,11 @@
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
                summary: '', tags: [], subtasks: [], collapsed: false,
-               createdAt: Date.now() };
+               dueDate: null, createdAt: Date.now() };
     }
 
     function createSubtask(text) {
-      return { id: crypto.randomUUID(), text: text.trim(), done: false };
+      return { id: crypto.randomUUID(), text: text.trim(), done: false, dueDate: null };
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -497,23 +485,46 @@
         ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    // Progress ring HTML builder
+    // Returns { label, cls } where cls is 'overdue' | 'today' | 'upcoming', or null
+    function dueState(dateStr) {
+      if (!dateStr) return null;
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const due   = new Date(y, m - 1, d);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const label = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (due < today) return { label, cls: 'overdue' };
+      if (due.getTime() === today.getTime()) return { label: 'Today', cls: 'today' };
+      return { label, cls: 'upcoming' };
+    }
+
+    const WARN_SVG = `<svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+      <path d="M5 1.2L9.2 8.8H0.8L5 1.2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M5 4.2V6.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <circle cx="5" cy="7.6" r="0.55" fill="currentColor"/>
+    </svg>`;
+
+    function dueBadge(dateStr, sm = false) {
+      const info = dueState(dateStr);
+      if (!info) return '';
+      const icon = info.cls === 'overdue' ? WARN_SVG : '';
+      return `<span class="due-chip due-${info.cls}${sm ? ' due-sm' : ''}">${icon}${esc(info.label)}</span>`;
+    }
+
+    // Progress ring
     function buildRingHtml(done, total) {
       if (total === 0) return '';
-      const pct   = Math.round(done / total * 100);
-      const r     = 11;
-      const circ  = +(2 * Math.PI * r).toFixed(2);
+      const pct    = Math.round(done / total * 100);
+      const r      = 11;
+      const circ   = +(2 * Math.PI * r).toFixed(2);
       const filled = +(circ * done / total).toFixed(2);
       const color  = done === total ? 'var(--green)' : 'var(--accent)';
       const tFill  = done === total ? 'var(--green)' : 'var(--muted)';
       return `<div class="prog-ring-wrap">
         <svg width="28" height="28" viewBox="0 0 28 28" style="display:block">
-          <circle cx="14" cy="14" r="${r}" fill="none"
-            stroke="var(--border)" stroke-width="2.5"/>
+          <circle cx="14" cy="14" r="${r}" fill="none" stroke="var(--border)" stroke-width="2.5"/>
           <circle class="ring-fill" cx="14" cy="14" r="${r}" fill="none"
             stroke="${color}" stroke-width="2.5" stroke-linecap="round"
-            stroke-dasharray="${filled} ${circ}"
-            transform="rotate(-90 14 14)"/>
+            stroke-dasharray="${filled} ${circ}" transform="rotate(-90 14 14)"/>
           <text class="ring-pct" x="14" y="14.5" text-anchor="middle"
             dominant-baseline="central" font-size="7" font-weight="700"
             fill="${tFill}" font-family="-apple-system,sans-serif">${pct}</text>
@@ -521,7 +532,6 @@
       </div>`;
     }
 
-    // Patch existing ring SVG in-place (no re-render)
     function updateRing(wrapEl, done, total) {
       if (!wrapEl) return;
       const pct    = total === 0 ? 0 : Math.round(done / total * 100);
@@ -532,10 +542,7 @@
       const tFill  = done === total ? 'var(--green)' : 'var(--muted)';
       const fillEl = wrapEl.querySelector('.ring-fill');
       const textEl = wrapEl.querySelector('.ring-pct');
-      if (fillEl) {
-        fillEl.style.strokeDasharray = `${filled} ${circ}`;
-        fillEl.style.stroke = color;
-      }
+      if (fillEl) { fillEl.style.strokeDasharray = `${filled} ${circ}`; fillEl.style.stroke = color; }
       if (textEl) { textEl.textContent = pct; textEl.setAttribute('fill', tFill); }
     }
 
@@ -548,6 +555,7 @@
     const backdropEl  = document.getElementById('backdrop');
     const sheetEl     = document.getElementById('sheet');
     const editTitleEl = document.getElementById('edit-title');
+    const editDueEl   = document.getElementById('edit-due');
     const editSumEl   = document.getElementById('edit-summary');
     const tagChipsEl  = document.getElementById('tag-chips');
     const tagInputEl  = document.getElementById('tag-input');
@@ -557,8 +565,8 @@
 
     // ── Render ────────────────────────────────────────────────
     function render() {
-      const all   = load();
-      const shown = activeTags.size > 0
+      const all    = load();
+      const shown  = activeTags.size > 0
         ? all.filter(t => t.tags.some(tag => activeTags.has(tag)))
         : all;
       const closed = all.filter(t => t.status === 'closed').length;
@@ -603,13 +611,16 @@
     function makeItem(todo) {
       const hasDetails = !!todo.summary || todo.tags.length > 0 || todo.subtasks.length > 0;
       const isCollapsed = hasDetails && todo.collapsed;
-      const doneCount  = todo.subtasks.filter(s => s.done).length;
-      const totalCount = todo.subtasks.length;
+      const doneCount   = todo.subtasks.filter(s => s.done).length;
+      const totalCount  = todo.subtasks.length;
+      const taskDue     = dueState(todo.dueDate);
+      const isOverdue   = taskDue?.cls === 'overdue' && todo.status !== 'closed';
 
       const el = document.createElement('div');
       el.className = ['todo-item',
         todo.status === 'closed' ? 'closed'    : '',
         isCollapsed               ? 'collapsed' : '',
+        isOverdue                 ? 'overdue'   : '',
       ].filter(Boolean).join(' ');
       el.dataset.id = todo.id;
 
@@ -623,13 +634,15 @@
             </svg>
           </button>` : '';
 
-      const sumHtml = todo.summary ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
+      const taskDueBadge = dueBadge(todo.dueDate);
+      const sumHtml  = todo.summary ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
       const tagsHtml = todo.tags.length
         ? `<div class="item-tags">${todo.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : '';
 
       const subtasksHtml = todo.subtasks.length
-        ? `<div class="subtask-list">${todo.subtasks.map(s => `
-            <div class="subtask-row${s.done ? ' done' : ''}" data-subtask-id="${s.id}">
+        ? `<div class="subtask-list">${todo.subtasks.map(s => {
+            const subDue = dueBadge(s.dueDate, true);
+            return `<div class="subtask-row${s.done ? ' done' : ''}" data-subtask-id="${s.id}">
               <div class="st-drag" aria-label="Hold to reorder subtask">
                 <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
                   <circle cx="2" cy="2"  r="1" fill="currentColor"/>
@@ -647,8 +660,9 @@
                 </svg>
               </button>
               <span class="subtask-text">${esc(s.text)}</span>
-            </div>`).join('')}
-          </div>` : '';
+              ${subDue}
+            </div>`;
+          }).join('')}</div>` : '';
 
       el.innerHTML = `
         <div class="drag-handle" aria-label="Hold to reorder">
@@ -673,6 +687,7 @@
             ${ringHtml}
             ${collapseHtml}
           </div>
+          ${taskDueBadge ? `<div class="item-due">${taskDueBadge}</div>` : ''}
           <div class="item-details">${sumHtml}${tagsHtml}${subtasksHtml}</div>
         </div>
         <button class="del-btn" aria-label="Delete task">
@@ -682,7 +697,6 @@
           </svg>
         </button>`;
 
-      // Main item events
       el.querySelector('.drag-handle').addEventListener('pointerdown',
         e => onHandleDown(e, todo.id), { passive: false });
       el.querySelector('.check-btn').addEventListener('click',
@@ -691,13 +705,11 @@
         () => openEdit(todo.id));
 
       const cb = el.querySelector('.collapse-btn');
-      if (cb) cb.addEventListener('click',
-        e => { e.stopPropagation(); toggleCollapse(todo.id); });
+      if (cb) cb.addEventListener('click', e => { e.stopPropagation(); toggleCollapse(todo.id); });
 
       el.querySelector('.del-btn').addEventListener('click',
         e => { e.stopPropagation(); removeTodo(todo.id); });
 
-      // Subtask events
       el.querySelectorAll('.subtask-row').forEach(row => {
         const sid = row.dataset.subtaskId;
         row.querySelector('.subtask-chk').addEventListener('click',
@@ -710,30 +722,24 @@
     }
 
     // ── Actions ───────────────────────────────────────────────
-    function addTodo(text) {
-      const todos = load(); todos.unshift(createTodo(text)); save(todos); render();
-    }
+    function addTodo(text) { const t = load(); t.unshift(createTodo(text)); save(t); render(); }
 
     function toggleStatus(id) {
-      const todos = load();
-      const t = todos.find(t => t.id === id);
+      const todos = load(); const t = todos.find(t => t.id === id);
       if (t) { t.status = t.status === 'closed' ? 'open' : 'closed'; save(todos); render(); }
     }
 
     function removeTodo(id) { save(load().filter(t => t.id !== id)); render(); }
 
     function updateTodo(id, fields) {
-      const todos = load();
-      const t = todos.find(t => t.id === id);
+      const todos = load(); const t = todos.find(t => t.id === id);
       if (t) { Object.assign(t, fields); save(todos); render(); }
     }
 
     function toggleCollapse(id) {
-      const todos = load();
-      const t = todos.find(t => t.id === id);
+      const todos = load(); const t = todos.find(t => t.id === id);
       if (!t) return;
-      t.collapsed = !t.collapsed;
-      save(todos);
+      t.collapsed = !t.collapsed; save(todos);
       const el = listEl.querySelector(`[data-id="${id}"]`);
       if (!el) return;
       el.classList.toggle('collapsed', t.collapsed);
@@ -742,15 +748,12 @@
     }
 
     function toggleSubtask(todoId, subtaskId) {
-      const todos = load();
-      const todo  = todos.find(t => t.id === todoId);
+      const todos = load(); const todo = todos.find(t => t.id === todoId);
       if (!todo) return;
       const sub = todo.subtasks.find(s => s.id === subtaskId);
       if (!sub) return;
-      sub.done = !sub.done;
-      save(todos);
+      sub.done = !sub.done; save(todos);
 
-      // DOM patch — no full re-render
       const row = listEl.querySelector(`[data-subtask-id="${subtaskId}"]`);
       if (row) row.classList.toggle('done', sub.done);
 
@@ -762,10 +765,9 @@
     // ── Main item drag ────────────────────────────────────────
     function onHandleDown(e, id) {
       e.preventDefault();
-      const sx = e.clientX, sy = e.clientY;
-      let moved = false;
-      const onMove = ev => { if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) { moved = true; cleanup(); } };
-      const cleanup = () => { clearTimeout(timer); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+      const sx = e.clientX, sy = e.clientY; let moved = false;
+      const onMove = ev => { if (Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy) > 8) { moved=true; cleanup(); } };
+      const cleanup = () => { clearTimeout(timer); window.removeEventListener('pointermove',onMove); window.removeEventListener('pointerup',onUp); };
       const onUp = () => cleanup();
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerup', onUp, { once: true });
@@ -788,14 +790,13 @@
     }
 
     function onDragMove(e) {
-      if (!drag) return;
-      e.preventDefault();
+      if (!drag) return; e.preventDefault();
       drag.ghost.style.top = (drag.ghostTop + e.clientY - drag.startY) + 'px';
-      const ghostMid = drag.ghost.getBoundingClientRect().top + drag.ghost.getBoundingClientRect().height / 2;
+      const ghostMid = drag.ghost.getBoundingClientRect().top + drag.ghost.getBoundingClientRect().height/2;
       for (const item of listEl.querySelectorAll('.todo-item')) {
         if (item === drag.itemEl) continue;
         const r = item.getBoundingClientRect();
-        if (ghostMid < r.top + r.height / 2) { listEl.insertBefore(drag.itemEl, item); return; }
+        if (ghostMid < r.top + r.height/2) { listEl.insertBefore(drag.itemEl, item); return; }
       }
       listEl.appendChild(drag.itemEl);
     }
@@ -806,19 +807,16 @@
       const order = [...listEl.querySelectorAll('.todo-item')].map(el => el.dataset.id);
       const todos = load();
       save(order.map(id => todos.find(t => t.id === id)).filter(Boolean));
-      drag.ghost.remove();
-      drag.itemEl.classList.remove('drag-source');
-      drag = null;
-      render();
+      drag.ghost.remove(); drag.itemEl.classList.remove('drag-source');
+      drag = null; render();
     }
 
     // ── Subtask drag ──────────────────────────────────────────
     function onSubHandleDown(e, todoId, subtaskId) {
       e.preventDefault();
-      const sx = e.clientX, sy = e.clientY;
-      let moved = false;
-      const onMove = ev => { if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) { moved = true; cleanup(); } };
-      const cleanup = () => { clearTimeout(timer); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+      const sx = e.clientX, sy = e.clientY; let moved = false;
+      const onMove = ev => { if (Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy) > 8) { moved=true; cleanup(); } };
+      const cleanup = () => { clearTimeout(timer); window.removeEventListener('pointermove',onMove); window.removeEventListener('pointerup',onUp); };
       const onUp = () => cleanup();
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerup', onUp, { once: true });
@@ -831,27 +829,24 @@
       const subList = itemEl?.querySelector('.subtask-list');
       const rowEl   = subList?.querySelector(`[data-subtask-id="${subtaskId}"]`);
       if (!rowEl || !subList) return;
-
       const rect  = rowEl.getBoundingClientRect();
       const ghost = rowEl.cloneNode(true);
       ghost.style.cssText = `position:fixed;top:${rect.top}px;left:${rect.left}px;width:${rect.width}px;margin:0;z-index:999;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.45);transform:scale(1.02);border-radius:6px;background:var(--surface-hi);padding:3px 0;transition:none`;
       document.body.appendChild(ghost);
       rowEl.classList.add('drag-source');
-
       subtaskDrag = { todoId, subtaskId, rowEl, subList, ghost, startY, ghostTop: rect.top };
       window.addEventListener('pointermove', onSubDragMove, { passive: false });
       window.addEventListener('pointerup', onSubDragEnd, { once: true });
     }
 
     function onSubDragMove(e) {
-      if (!subtaskDrag) return;
-      e.preventDefault();
+      if (!subtaskDrag) return; e.preventDefault();
       subtaskDrag.ghost.style.top = (subtaskDrag.ghostTop + e.clientY - subtaskDrag.startY) + 'px';
-      const ghostMid = subtaskDrag.ghost.getBoundingClientRect().top + subtaskDrag.ghost.getBoundingClientRect().height / 2;
+      const ghostMid = subtaskDrag.ghost.getBoundingClientRect().top + subtaskDrag.ghost.getBoundingClientRect().height/2;
       for (const row of subtaskDrag.subList.querySelectorAll('.subtask-row')) {
         if (row === subtaskDrag.rowEl) continue;
         const r = row.getBoundingClientRect();
-        if (ghostMid < r.top + r.height / 2) { subtaskDrag.subList.insertBefore(subtaskDrag.rowEl, row); return; }
+        if (ghostMid < r.top + r.height/2) { subtaskDrag.subList.insertBefore(subtaskDrag.rowEl, row); return; }
       }
       subtaskDrag.subList.appendChild(subtaskDrag.rowEl);
     }
@@ -859,18 +854,14 @@
     function onSubDragEnd() {
       if (!subtaskDrag) return;
       window.removeEventListener('pointermove', onSubDragMove);
-
       const newOrder = [...subtaskDrag.subList.querySelectorAll('.subtask-row')].map(r => r.dataset.subtaskId);
-      const todos = load();
-      const todo  = todos.find(t => t.id === subtaskDrag.todoId);
+      const todos = load(); const todo = todos.find(t => t.id === subtaskDrag.todoId);
       if (todo) {
         const map = Object.fromEntries(todo.subtasks.map(s => [s.id, s]));
         todo.subtasks = newOrder.map(id => map[id]).filter(Boolean);
         save(todos);
       }
-
-      subtaskDrag.ghost.remove();
-      subtaskDrag.rowEl.classList.remove('drag-source');
+      subtaskDrag.ghost.remove(); subtaskDrag.rowEl.classList.remove('drag-source');
       subtaskDrag = null;
     }
 
@@ -884,6 +875,7 @@
       sheetSubtasks = todo.subtasks.map(s => ({ ...s }));
 
       editTitleEl.value = todo.text;
+      editDueEl.value   = todo.dueDate || '';
       editSumEl.value   = todo.summary;
       subInputEl.value  = '';
       syncStatus(); renderChips(); renderSheetSubtasks();
@@ -928,9 +920,14 @@
                 stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <span class="sheet-sub-text">${esc(s.text)}</span>
+          <div class="sheet-sub-body">
+            <span class="sheet-sub-text">${esc(s.text)}</span>
+            <input type="date" class="sheet-sub-date" data-i="${i}"
+              value="${s.dueDate || ''}" aria-label="Subtask due date" />
+          </div>
           <button class="sheet-sub-del" data-i="${i}" aria-label="Delete">×</button>
         </div>`).join('');
+
       sheetSubsEl.querySelectorAll('.sheet-sub-chk').forEach(btn =>
         btn.addEventListener('click', () => {
           const i = Number(btn.dataset.i);
@@ -940,6 +937,11 @@
       );
       sheetSubsEl.querySelectorAll('.sheet-sub-del').forEach(btn =>
         btn.addEventListener('click', () => { sheetSubtasks.splice(Number(btn.dataset.i), 1); renderSheetSubtasks(); })
+      );
+      sheetSubsEl.querySelectorAll('.sheet-sub-date').forEach(input =>
+        input.addEventListener('change', () => {
+          sheetSubtasks[Number(input.dataset.i)].dueDate = input.value || null;
+        })
       );
     }
 
@@ -951,6 +953,7 @@
       renderSheetSubtasks();
     }
 
+    // Sheet event bindings
     document.getElementById('sheet-close').addEventListener('click', closeEdit);
     backdropEl.addEventListener('click', closeEdit);
 
@@ -975,6 +978,7 @@
       if (subInputEl.value.trim()) addSheetSubtask();
       updateTodo(editId, {
         text: title, status: sheetStatus,
+        dueDate: editDueEl.value || null,
         summary: editSumEl.value.trim(),
         tags: [...sheetTags],
         subtasks: [...sheetSubtasks],
