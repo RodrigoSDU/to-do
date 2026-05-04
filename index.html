@@ -395,7 +395,7 @@
     .todo-item.confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
 
     /* ── Tag color picker ── */
-    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; gap: 8px; flex-wrap: wrap; max-width: 196px; }
+    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: grid; grid-template-columns: repeat(4, 26px); gap: 8px; }
     .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.18); }
     .tag-color-swatch:hover { transform: scale(1.18); }
     .tag-color-swatch.active { border-color: #fff; }
@@ -1301,7 +1301,7 @@
       document.body.appendChild(pop);
 
       const rect = anchorEl.getBoundingClientRect();
-      const pw   = 196;
+      const pw   = 152; /* 4*(26+8)-8 + 2*12 */
       let left   = rect.left;
       if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
       pop.style.top  = (rect.bottom + 6) + 'px';
