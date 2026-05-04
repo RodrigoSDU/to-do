@@ -395,8 +395,8 @@
     .todo-item.confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
 
     /* ── Tag color picker ── */
-    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; gap: 8px; flex-wrap: wrap; max-width: 220px; }
-    .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; }
+    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; gap: 8px; flex-wrap: wrap; max-width: 196px; }
+    .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.18); }
     .tag-color-swatch:hover { transform: scale(1.18); }
     .tag-color-swatch.active { border-color: #fff; }
   </style>
@@ -520,14 +520,22 @@
 
     const TAG_COLOR_KEY = 'tag_colors_v1';
     const TAG_PALETTES = [
-      { label: 'Purple', fg: '#7c6af7', bg: 'rgba(124,106,247,0.15)' },
-      { label: 'Pink',   fg: '#ec4899', bg: 'rgba(236,72,153,0.15)'  },
-      { label: 'Red',    fg: '#f87171', bg: 'rgba(248,113,113,0.15)' },
-      { label: 'Orange', fg: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
-      { label: 'Yellow', fg: '#eab308', bg: 'rgba(234,179,8,0.15)'   },
-      { label: 'Green',  fg: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
-      { label: 'Teal',   fg: '#2dd4bf', bg: 'rgba(45,212,191,0.15)'  },
-      { label: 'Blue',   fg: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
+      { label: 'Black',   swatch: '#1c1c1c', fg: '#a0a0b0', bg: 'rgba(160,160,176,0.12)' },
+      { label: 'White',   swatch: '#f0f0f0', fg: '#dcdce8', bg: 'rgba(220,220,232,0.12)' },
+      { label: 'Gray',    swatch: '#808080', fg: '#9090a0', bg: 'rgba(144,144,160,0.12)' },
+      { label: 'Silver',  swatch: '#c0c0c0', fg: '#b8b8c8', bg: 'rgba(184,184,200,0.12)' },
+      { label: 'Maroon',  swatch: '#800000', fg: '#e07070', bg: 'rgba(224,112,112,0.12)' },
+      { label: 'Red',     swatch: '#ff0000', fg: '#f87171', bg: 'rgba(248,113,113,0.12)' },
+      { label: 'Purple',  swatch: '#800080', fg: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
+      { label: 'Fuchsia', swatch: '#ff00ff', fg: '#f0a0f8', bg: 'rgba(240,160,248,0.12)' },
+      { label: 'Green',   swatch: '#008000', fg: '#4ade80', bg: 'rgba(74,222,128,0.12)'  },
+      { label: 'Lime',    swatch: '#00ff00', fg: '#a3e635', bg: 'rgba(163,230,53,0.12)'  },
+      { label: 'Olive',   swatch: '#808000', fg: '#c0b840', bg: 'rgba(192,184,64,0.12)'  },
+      { label: 'Yellow',  swatch: '#ffff00', fg: '#fde047', bg: 'rgba(253,224,71,0.12)'  },
+      { label: 'Navy',    swatch: '#000080', fg: '#818cf8', bg: 'rgba(129,140,248,0.12)' },
+      { label: 'Blue',    swatch: '#0000ff', fg: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
+      { label: 'Teal',    swatch: '#008080', fg: '#2dd4bf', bg: 'rgba(45,212,191,0.12)'  },
+      { label: 'Aqua',    swatch: '#00ffff', fg: '#67e8f9', bg: 'rgba(103,232,249,0.12)' },
     ];
 
     // Calendar state
@@ -1275,7 +1283,7 @@
       TAG_PALETTES.forEach((p, i) => {
         const sw = document.createElement('button');
         sw.className = 'tag-color-swatch' + (current === i ? ' active' : '');
-        sw.style.background = p.fg;
+        sw.style.background = p.swatch;
         sw.title = p.label;
         sw.addEventListener('click', e => {
           e.stopPropagation();
@@ -1291,7 +1299,7 @@
       document.body.appendChild(pop);
 
       const rect = anchorEl.getBoundingClientRect();
-      const pw   = 220;
+      const pw   = 196;
       let left   = rect.left;
       if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
       pop.style.top  = (rect.bottom + 6) + 'px';
