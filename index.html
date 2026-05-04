@@ -380,6 +380,25 @@
     .btn-delete:active { background: rgba(248,113,113,0.1); }
     .btn-save { flex: 2; padding: 13px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
     .btn-save:active { opacity: 0.85; }
+
+    /* ── Calendar overdue ── */
+    .cal-cell.cal-overdue:not(.cal-selected) { border-color: rgba(248,113,113,0.35); }
+    .cal-cell.cal-overdue:not(.cal-selected) .cal-cnt { background: rgba(248,113,113,0.15); color: var(--red); }
+    .cal-item.is-overdue:not(.is-closed):not(.is-done) { border-color: rgba(248,113,113,0.45); }
+    .cal-item.is-overdue:not(.is-closed):not(.is-done) .cal-item-kind { color: var(--red); }
+
+    /* ── Delete confirmation ── */
+    .del-confirm { display: flex; align-items: center; gap: 8px; padding-top: 8px; margin-top: 6px; border-top: 1px solid rgba(248,113,113,0.2); }
+    .del-confirm span { flex: 1; font-size: 0.8rem; color: var(--red); }
+    .del-confirm-cancel { background: var(--surface-hi); border: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .del-confirm-yes { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.35); color: var(--red); font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 500; }
+    .todo-item.confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
+
+    /* ── Tag color picker ── */
+    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; gap: 8px; flex-wrap: wrap; max-width: 220px; }
+    .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; }
+    .tag-color-swatch:hover { transform: scale(1.18); }
+    .tag-color-swatch.active { border-color: #fff; }
   </style>
 </head>
 <body>
@@ -497,6 +516,19 @@
     let sheetTags     = [];
     let sheetStatus   = 'open';
     let sheetSubtasks = [];
+    let _tagColors    = {};
+
+    const TAG_COLOR_KEY = 'tag_colors_v1';
+    const TAG_PALETTES = [
+      { label: 'Purple', fg: '#7c6af7', bg: 'rgba(124,106,247,0.15)' },
+      { label: 'Pink',   fg: '#ec4899', bg: 'rgba(236,72,153,0.15)'  },
+      { label: 'Red',    fg: '#f87171', bg: 'rgba(248,113,113,0.15)' },
+      { label: 'Orange', fg: '#fb923c', bg: 'rgba(251,146,60,0.15)'  },
+      { label: 'Yellow', fg: '#eab308', bg: 'rgba(234,179,8,0.15)'   },
+      { label: 'Green',  fg: '#4ade80', bg: 'rgba(74,222,128,0.15)'  },
+      { label: 'Teal',   fg: '#2dd4bf', bg: 'rgba(45,212,191,0.15)'  },
+      { label: 'Blue',   fg: '#60a5fa', bg: 'rgba(96,165,250,0.15)'  },
+    ];
 
     // Calendar state
     let calView = false;
@@ -524,6 +556,11 @@
     }
 
     function save(todos) { localStorage.setItem(KEY, JSON.stringify(todos)); }
+
+    function loadTagColors() {
+      try { return JSON.parse(localStorage.getItem(TAG_COLOR_KEY)) || {}; } catch { return {}; }
+    }
+    function saveTagColors(c) { localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(c)); }
 
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
@@ -615,6 +652,7 @@
 
     // ── Render (dispatches to list or calendar) ───────────────
     function render() {
+      _tagColors   = loadTagColors();
       const all    = load();
       const closed = all.filter(t => t.status === 'closed').length;
       statsEl.textContent = all.length ? `${closed} of ${all.length} closed` : 'Nothing here yet';
@@ -650,25 +688,52 @@
 
     function renderFilterBar(todos) {
       const tags = [...new Set(todos.flatMap(t => t.tags))].sort();
-      filterBarEl.innerHTML = tags.map(tag =>
-        `<button class="filter-tag${activeTags.has(tag) ? ' active' : ''}" data-tag="${esc(tag)}">${esc(tag)}</button>`
-      ).join('');
-      filterBarEl.querySelectorAll('.filter-tag').forEach(btn =>
+      filterBarEl.innerHTML = tags.map(tag => {
+        const isActive = activeTags.has(tag);
+        const p = TAG_PALETTES[_tagColors[tag] || 0];
+        const style = isActive ? `background:${p.bg};color:${p.fg};border-color:${p.fg}` : '';
+        return `<button class="filter-tag${isActive ? ' active' : ''}" data-tag="${esc(tag)}" style="${style}">${esc(tag)}</button>`;
+      }).join('');
+
+      filterBarEl.querySelectorAll('.filter-tag').forEach(btn => {
+        const tag = btn.dataset.tag;
+        let pressTimer = null;
+        let longPressed = false;
+
+        btn.addEventListener('pointerdown', () => {
+          longPressed = false;
+          pressTimer = setTimeout(() => {
+            pressTimer = null;
+            longPressed = true;
+            if (navigator.vibrate) navigator.vibrate(18);
+            openTagColorPicker(tag, btn);
+          }, 500);
+        });
+        const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+        btn.addEventListener('pointerup', cancelPress);
+        btn.addEventListener('pointercancel', cancelPress);
+
         btn.addEventListener('click', () => {
-          const tag = btn.dataset.tag;
+          if (longPressed) { longPressed = false; return; }
           activeTags.has(tag) ? activeTags.delete(tag) : activeTags.add(tag);
           render();
-        })
-      );
+        });
+      });
     }
 
     // ── Calendar ──────────────────────────────────────────────
     function buildCountMap(todos) {
       const map = {};
+      const today = todayStr();
+      const bump = (date, overdue) => {
+        if (!map[date]) map[date] = { count: 0, hasOverdue: false };
+        map[date].count++;
+        if (overdue) map[date].hasOverdue = true;
+      };
       todos.forEach(t => {
-        if (t.dueDate) map[t.dueDate] = (map[t.dueDate] || 0) + 1;
+        if (t.dueDate) bump(t.dueDate, t.dueDate < today && t.status !== 'closed');
         t.subtasks.forEach(s => {
-          if (s.dueDate) map[s.dueDate] = (map[s.dueDate] || 0) + 1;
+          if (s.dueDate) bump(s.dueDate, s.dueDate < today && !s.done);
         });
       });
       return map;
@@ -690,11 +755,13 @@
       for (let i = 0; i < startDow; i++) html += `<div class="cal-cell cal-empty"></div>`;
 
       for (let d = 1; d <= last; d++) {
-        const ds  = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const cnt = counts[ds] || 0;
-        const cls = ['cal-cell',
-          ds === tStr      ? 'cal-today'    : '',
-          ds === calSelDate ? 'cal-selected' : '',
+        const ds    = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const entry = counts[ds];
+        const cnt   = entry ? entry.count : 0;
+        const cls   = ['cal-cell',
+          ds === tStr       ? 'cal-today'    : '',
+          ds === calSelDate  ? 'cal-selected' : '',
+          entry?.hasOverdue  ? 'cal-overdue'  : '',
         ].filter(Boolean).join(' ');
         html += `<div class="${cls}" data-date="${ds}">
           <span class="cal-dn">${d}</span>
@@ -719,9 +786,15 @@
       const items = [];
 
       all.forEach(todo => {
-        if (todo.dueDate === dateStr) items.push({ kind: 'task', todo });
+        if (todo.dueDate === dateStr) {
+          const overdue = dueState(todo.dueDate)?.cls === 'overdue' && todo.status !== 'closed';
+          items.push({ kind: 'task', todo, overdue });
+        }
         todo.subtasks.forEach(sub => {
-          if (sub.dueDate === dateStr) items.push({ kind: 'subtask', sub, parent: todo });
+          if (sub.dueDate === dateStr) {
+            const overdue = dueState(sub.dueDate)?.cls === 'overdue' && !sub.done;
+            items.push({ kind: 'subtask', sub, parent: todo, overdue });
+          }
         });
       });
 
@@ -741,12 +814,14 @@
         <div class="cal-detail-hdr">${esc(label)}</div>
         ${items.map(item => {
           if (item.kind === 'task') {
-            return `<div class="cal-item${item.todo.status === 'closed' ? ' is-closed' : ''}" data-id="${item.todo.id}">
+            const cls = ['cal-item', item.todo.status === 'closed' ? 'is-closed' : '', item.overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
+            return `<div class="${cls}" data-id="${item.todo.id}">
               <div class="cal-item-kind task-lbl">Task</div>
               <div class="cal-item-title">${esc(item.todo.text)}</div>
             </div>`;
           } else {
-            return `<div class="cal-item${item.sub.done ? ' is-done' : ''}" data-todo-id="${item.parent.id}">
+            const cls = ['cal-item', item.sub.done ? 'is-done' : '', item.overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
+            return `<div class="${cls}" data-todo-id="${item.parent.id}">
               <div class="cal-item-kind sub-lbl">Subtask of</div>
               <div class="cal-item-parent">${esc(item.parent.text)}</div>
               <div class="cal-item-sub">${esc(item.sub.text)}</div>
@@ -819,7 +894,10 @@
       const taskDueBadge = dueBadge(todo.dueDate);
       const sumHtml  = todo.summary ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
       const tagsHtml = todo.tags.length
-        ? `<div class="item-tags">${todo.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : '';
+        ? `<div class="item-tags">${todo.tags.map(t => {
+            const p = TAG_PALETTES[_tagColors[t] || 0];
+            return `<span class="tag" style="background:${p.bg};color:${p.fg}">${esc(t)}</span>`;
+          }).join('')}</div>` : '';
       const subtasksHtml = todo.subtasks.length
         ? `<div class="subtask-list">${todo.subtasks.map(s => {
             return `<div class="subtask-row${s.done ? ' done' : ''}" data-subtask-id="${s.id}">
@@ -884,8 +962,26 @@
       const cb = el.querySelector('.collapse-btn');
       if (cb) cb.addEventListener('click', e => { e.stopPropagation(); toggleCollapse(todo.id); });
 
-      el.querySelector('.del-btn').addEventListener('click',
-        e => { e.stopPropagation(); removeTodo(todo.id); });
+      el.querySelector('.del-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if (el.classList.contains('confirming-delete')) return;
+        el.classList.add('confirming-delete');
+        const bar = document.createElement('div');
+        bar.className = 'del-confirm';
+        bar.innerHTML = `<span>Delete this task?</span>
+          <button class="del-confirm-cancel">Cancel</button>
+          <button class="del-confirm-yes">Delete</button>`;
+        el.querySelector('.item-body').appendChild(bar);
+        let autoTimer;
+        const cancel = () => {
+          el.classList.remove('confirming-delete');
+          bar.remove();
+          clearTimeout(autoTimer);
+        };
+        bar.querySelector('.del-confirm-cancel').addEventListener('click', ev => { ev.stopPropagation(); cancel(); });
+        bar.querySelector('.del-confirm-yes').addEventListener('click', ev => { ev.stopPropagation(); removeTodo(todo.id); });
+        autoTimer = setTimeout(cancel, 4000);
+      });
 
       el.querySelectorAll('.subtask-row').forEach(row => {
         const sid = row.dataset.subtaskId;
@@ -1053,6 +1149,11 @@
 
     function closeEdit() {
       editId = null;
+      const delBtn = document.getElementById('sheet-delete');
+      delBtn.dataset.confirm = '';
+      delBtn.textContent = 'Delete';
+      delBtn.style.cssText = '';
+      if (delBtn._resetTimer) { clearTimeout(delBtn._resetTimer); delBtn._resetTimer = null; }
       backdropEl.classList.remove('open'); sheetEl.classList.remove('open');
     }
 
@@ -1135,7 +1236,22 @@
       });
       closeEdit();
     });
-    document.getElementById('sheet-delete').addEventListener('click', () => { removeTodo(editId); closeEdit(); });
+    document.getElementById('sheet-delete').addEventListener('click', () => {
+      const btn = document.getElementById('sheet-delete');
+      if (btn.dataset.confirm === '1') {
+        removeTodo(editId); closeEdit(); return;
+      }
+      btn.dataset.confirm = '1';
+      btn.textContent = 'Confirm delete';
+      btn.style.background = 'rgba(248,113,113,0.12)';
+      btn.style.borderColor = 'rgba(248,113,113,0.45)';
+      btn._resetTimer = setTimeout(() => {
+        btn.dataset.confirm = '';
+        btn.textContent = 'Delete';
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 3000);
+    });
 
     // ── Input bar ─────────────────────────────────────────────
     inputEl.addEventListener('input', () => { addBtnEl.disabled = !inputEl.value.trim(); });
@@ -1144,6 +1260,57 @@
     function submit() {
       const text = inputEl.value.trim(); if (!text) return;
       addTodo(text); inputEl.value = ''; addBtnEl.disabled = true;
+    }
+
+    // ── Tag color picker ─────────────────────────────────────
+    function openTagColorPicker(tag, anchorEl) {
+      closeTagColorPicker();
+      const colors  = loadTagColors();
+      const current = colors[tag] || 0;
+
+      const pop = document.createElement('div');
+      pop.className = 'tag-color-pop';
+      pop.id = 'tag-color-pop';
+
+      TAG_PALETTES.forEach((p, i) => {
+        const sw = document.createElement('button');
+        sw.className = 'tag-color-swatch' + (current === i ? ' active' : '');
+        sw.style.background = p.fg;
+        sw.title = p.label;
+        sw.addEventListener('click', e => {
+          e.stopPropagation();
+          const tc = loadTagColors();
+          if (i === 0) delete tc[tag]; else tc[tag] = i;
+          saveTagColors(tc);
+          closeTagColorPicker();
+          render();
+        });
+        pop.appendChild(sw);
+      });
+
+      document.body.appendChild(pop);
+
+      const rect = anchorEl.getBoundingClientRect();
+      const pw   = 220;
+      let left   = rect.left;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      pop.style.top  = (rect.bottom + 6) + 'px';
+      pop.style.left = Math.max(8, left) + 'px';
+
+      setTimeout(() => document.addEventListener('pointerdown', _closePop), 50);
+    }
+
+    function _closePop(e) {
+      const pop = document.getElementById('tag-color-pop');
+      if (!pop) return;
+      if (!pop.contains(e.target)) { closeTagColorPicker(); }
+      else { document.addEventListener('pointerdown', _closePop, { once: true }); }
+    }
+
+    function closeTagColorPicker() {
+      document.removeEventListener('pointerdown', _closePop);
+      const pop = document.getElementById('tag-color-pop');
+      if (pop) pop.remove();
     }
 
     // ── Boot ──────────────────────────────────────────────────
