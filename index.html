@@ -33,10 +33,45 @@
     }
 
     /* ── Header ── */
-    header { padding: 52px 20px 14px; }
+    header {
+      padding: 52px 20px 12px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
     header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
     header h1 span { color: var(--accent); }
     .stats { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 10px 0 2px;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-bar:empty { display: none; }
+    .filter-tag {
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .filter-tag.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
 
     /* ── List ── */
     #list {
@@ -53,7 +88,7 @@
       color: var(--muted); font-size: 0.9rem; opacity: 0.5;
     }
 
-    /* ── Item ── */
+    /* ── Todo item ── */
     .todo-item {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -62,11 +97,6 @@
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      animation: fadeUp 0.18s ease-out;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
     }
     .todo-item.closed { opacity: 0.45; }
     .todo-item.drag-source { opacity: 0; pointer-events: none; }
@@ -84,15 +114,13 @@
     }
     .drag-handle:active { cursor: grabbing; }
 
-    /* Checkbox */
+    /* Status check */
     .check-btn {
       width: 22px; height: 22px;
       border-radius: 50%;
       border: 2px solid var(--border);
       background: transparent;
-      cursor: pointer;
-      flex-shrink: 0;
-      margin-top: 2px;
+      cursor: pointer; flex-shrink: 0; margin-top: 2px;
       display: flex; align-items: center; justify-content: center;
       transition: border-color 0.15s, background 0.15s;
       -webkit-tap-highlight-color: transparent;
@@ -101,21 +129,86 @@
     .todo-item.closed .check-btn { border-color: var(--green); background: var(--green); }
     .todo-item.closed .check-btn svg { display: block; }
 
-    /* Body */
-    .item-body { flex: 1; min-width: 0; cursor: pointer; padding-top: 2px; }
-    .todo-text { display: block; font-size: 0.97rem; line-height: 1.45; word-break: break-word; }
-    .todo-item.closed .todo-text { text-decoration: line-through; color: var(--muted); }
-    .item-summary {
-      font-size: 0.8rem; color: var(--muted);
-      margin-top: 3px; line-height: 1.4;
-      word-break: break-word; white-space: pre-wrap;
+    /* Item body */
+    .item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+
+    .item-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      min-height: 24px;
     }
-    .item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .todo-text {
+      flex: 1;
+      font-size: 0.97rem;
+      line-height: 1.45;
+      word-break: break-word;
+      cursor: pointer;
+      padding-top: 2px;
+    }
+    .todo-item.closed .todo-text { text-decoration: line-through; color: var(--muted); }
+
+    .subtask-badge {
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--surface-hi);
+      padding: 2px 6px;
+      border-radius: 100px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .collapse-btn {
+      background: transparent; border: none;
+      color: var(--muted); cursor: pointer;
+      padding: 2px 2px; flex-shrink: 0;
+      display: flex; align-items: center;
+      -webkit-tap-highlight-color: transparent;
+      margin-top: 3px;
+    }
+    .collapse-btn svg { transition: transform 0.2s; transform: rotate(180deg); }
+    .todo-item.collapsed .collapse-btn svg { transform: rotate(0deg); }
+
+    /* Details section */
+    .item-details { padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+    .todo-item.collapsed .item-details { display: none; }
+
+    .item-summary {
+      font-size: 0.82rem; color: var(--muted);
+      line-height: 1.4; word-break: break-word; white-space: pre-wrap;
+    }
+    .item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
     .tag {
       font-size: 0.72rem; padding: 2px 8px;
       border-radius: 100px;
       background: var(--accent-dim); color: var(--accent); font-weight: 500;
     }
+
+    /* Subtasks in card */
+    .subtask-list {
+      display: flex; flex-direction: column; gap: 4px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px; margin-top: 2px;
+    }
+    .subtask-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .subtask-chk {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: transparent;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .subtask-chk svg { display: none; }
+    .subtask-row.done .subtask-chk { border-color: var(--green); background: var(--green); }
+    .subtask-row.done .subtask-chk svg { display: block; }
+    .subtask-text {
+      flex: 1; font-size: 0.88rem; color: var(--text); line-height: 1.35;
+    }
+    .subtask-row.done .subtask-text { text-decoration: line-through; color: var(--muted); }
 
     /* Delete btn */
     .del-btn {
@@ -140,8 +233,7 @@
       display: flex; gap: 10px; align-items: center;
     }
     #todo-input {
-      flex: 1;
-      background: var(--surface); border: 1px solid var(--border);
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
       border-radius: 50px; color: var(--text);
       font-size: 1rem; padding: 12px 18px;
       outline: none; -webkit-appearance: none;
@@ -162,8 +254,8 @@
     /* ── Backdrop ── */
     .backdrop {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 50; opacity: 0; pointer-events: none;
+      background: rgba(0,0,0,0.65); z-index: 50;
+      opacity: 0; pointer-events: none;
       transition: opacity 0.25s;
     }
     .backdrop.open { opacity: 1; pointer-events: all; }
@@ -181,65 +273,52 @@
       padding-bottom: env(safe-area-inset-bottom);
     }
     .sheet.open { transform: translateX(-50%) translateY(0); }
-
     .sheet-grip {
       width: 36px; height: 4px;
       background: var(--border); border-radius: 2px;
       margin: 12px auto 0;
     }
     .sheet-inner { padding: 16px 20px 24px; }
-
     .sheet-header {
       display: flex; align-items: center;
       justify-content: space-between; margin-bottom: 20px;
     }
     .sheet-header h2 { font-size: 1.1rem; font-weight: 600; }
     .sheet-close-btn {
-      background: var(--surface-hi); border: none;
-      color: var(--muted); width: 28px; height: 28px;
-      border-radius: 50%; cursor: pointer;
-      font-size: 0.85rem;
+      background: var(--surface-hi); border: none; color: var(--muted);
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: 0.85rem;
       display: flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
 
     .field-group { margin-bottom: 18px; }
     .field-label {
-      font-size: 0.75rem; font-weight: 600;
-      color: var(--muted); text-transform: uppercase;
-      letter-spacing: 0.08em; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
     }
-    .optional {
-      font-weight: 400; text-transform: none;
-      letter-spacing: 0; font-size: 0.75rem; opacity: 0.65;
-    }
+    .optional { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.75rem; opacity: 0.65; }
 
-    .sheet input[type="text"],
-    .sheet textarea {
-      width: 100%; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 10px;
-      color: var(--text); font-size: 0.97rem;
-      padding: 11px 14px; outline: none;
-      font-family: inherit; -webkit-appearance: none;
-      transition: border-color 0.15s;
+    .sheet input[type="text"], .sheet textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 0.97rem;
+      padding: 11px 14px; outline: none; font-family: inherit;
+      -webkit-appearance: none; transition: border-color 0.15s;
     }
     .sheet textarea { resize: vertical; }
-    .sheet input[type="text"]:focus,
-    .sheet textarea:focus { border-color: var(--accent); }
-    .sheet input::placeholder,
-    .sheet textarea::placeholder { color: var(--muted); }
+    .sheet input[type="text"]:focus, .sheet textarea:focus { border-color: var(--accent); }
+    .sheet input::placeholder, .sheet textarea::placeholder { color: var(--muted); }
 
-    /* Status segmented control */
+    /* Status segmented */
     .seg-ctrl {
       display: flex; background: var(--bg);
       border: 1px solid var(--border); border-radius: 10px;
       padding: 3px; gap: 3px;
     }
     .seg-btn {
-      flex: 1; padding: 8px; border: none;
-      background: transparent; color: var(--muted);
-      border-radius: 8px; font-size: 0.9rem;
+      flex: 1; padding: 8px; border: none; background: transparent;
+      color: var(--muted); border-radius: 8px; font-size: 0.9rem;
       cursor: pointer; font-family: inherit;
       transition: background 0.15s, color 0.15s;
     }
@@ -257,39 +336,80 @@
     .tag-chip {
       display: inline-flex; align-items: center; gap: 4px;
       background: var(--accent-dim); color: var(--accent);
-      font-size: 0.78rem; padding: 3px 8px;
-      border-radius: 100px; font-weight: 500;
+      font-size: 0.78rem; padding: 3px 8px; border-radius: 100px; font-weight: 500;
     }
     .tag-remove {
       background: none; border: none; color: var(--accent);
-      cursor: pointer; font-size: 1rem; line-height: 1;
-      padding: 0; opacity: 0.7;
+      cursor: pointer; font-size: 1rem; line-height: 1; padding: 0; opacity: 0.7;
     }
     .tag-remove:hover { opacity: 1; }
     #tag-input {
       width: 100%; background: transparent; border: none;
-      color: var(--text); font-size: 0.9rem;
-      outline: none; font-family: inherit;
+      color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit;
     }
     #tag-input::placeholder { color: var(--muted); }
+
+    /* Subtasks in sheet */
+    #sheet-subtasks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .sheet-sub-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border-radius: 8px; padding: 8px 10px;
+    }
+    .sheet-sub-chk {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: transparent;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-sub-chk svg { display: none; }
+    .sheet-sub-row.done .sheet-sub-chk { border-color: var(--green); background: var(--green); }
+    .sheet-sub-row.done .sheet-sub-chk svg { display: block; }
+    .sheet-sub-text {
+      flex: 1; font-size: 0.9rem; color: var(--text);
+    }
+    .sheet-sub-row.done .sheet-sub-text { text-decoration: line-through; color: var(--muted); }
+    .sheet-sub-del {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: 1.1rem; padding: 0 2px; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-sub-del:hover { color: var(--red); }
+    .sheet-sub-add {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .sheet-sub-add input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); font-size: 0.9rem;
+      padding: 9px 12px; outline: none; font-family: inherit;
+      -webkit-appearance: none; transition: border-color 0.15s;
+    }
+    .sheet-sub-add input:focus { border-color: var(--accent); }
+    .sheet-sub-add input::placeholder { color: var(--muted); }
+    .sheet-sub-add-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--accent-dim); border: none;
+      color: var(--accent); font-size: 1.3rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    .sheet-sub-add-btn:hover { background: var(--accent); color: #fff; }
 
     /* Sheet actions */
     .sheet-actions { display: flex; gap: 10px; margin-top: 24px; }
     .btn-delete {
-      flex: 1; padding: 13px;
-      background: transparent; border: 1px solid var(--border);
-      border-radius: 12px; color: var(--red);
-      font-size: 0.95rem; cursor: pointer; font-family: inherit;
+      flex: 1; padding: 13px; background: transparent;
+      border: 1px solid var(--border); border-radius: 12px;
+      color: var(--red); font-size: 0.95rem; cursor: pointer; font-family: inherit;
       transition: background 0.15s;
     }
     .btn-delete:active { background: rgba(248,113,113,0.1); }
     .btn-save {
-      flex: 2; padding: 13px;
-      background: var(--accent); border: none;
-      border-radius: 12px; color: #fff;
-      font-size: 0.95rem; font-weight: 600;
-      cursor: pointer; font-family: inherit;
-      transition: opacity 0.15s;
+      flex: 2; padding: 13px; background: var(--accent); border: none;
+      border-radius: 12px; color: #fff; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: opacity 0.15s;
     }
     .btn-save:active { opacity: 0.85; }
   </style>
@@ -299,6 +419,7 @@
   <header>
     <h1>My <span>Todo</span></h1>
     <p class="stats" id="stats"></p>
+    <div id="filter-bar" class="filter-bar"></div>
   </header>
 
   <main id="list"></main>
@@ -348,6 +469,20 @@
         </div>
       </div>
 
+      <div class="field-group">
+        <div class="field-label">Subtasks <span class="optional">optional</span></div>
+        <div id="sheet-subtasks"></div>
+        <div class="sheet-sub-add">
+          <input id="sub-input" type="text" placeholder="Add a subtask…"
+            maxlength="200" autocomplete="off" />
+          <button id="sub-add-btn" class="sheet-sub-add-btn" aria-label="Add subtask">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <div class="sheet-actions">
         <button id="sheet-delete" class="btn-delete">Delete</button>
         <button id="sheet-save" class="btn-save">Save</button>
@@ -357,19 +492,25 @@
 
   <script>
     const KEY = 'todos_v1';
-    let editId = null;
-    let drag = null;
-    let sheetTags = [];
-    let sheetStatus = 'open';
 
-    // ── Storage ──────────────────────────────────────────────
+    // ── State ─────────────────────────────────────────────────
+    let editId     = null;
+    let drag       = null;
+    let activeTag  = null;
+    let sheetTags      = [];
+    let sheetStatus    = 'open';
+    let sheetSubtasks  = [];
+
+    // ── Storage ───────────────────────────────────────────────
     function load() {
       try {
         const raw = JSON.parse(localStorage.getItem(KEY)) || [];
         return raw.map(t => {
           if (t.status === undefined) t.status = t.done ? 'closed' : 'open';
-          if (!t.tags) t.tags = [];
-          if (t.summary == null) t.summary = '';
+          if (!t.tags)     t.tags     = [];
+          if (!t.subtasks) t.subtasks = [];
+          if (t.summary  == null) t.summary  = '';
+          if (t.collapsed == null) t.collapsed = false;
           delete t.done;
           return t;
         });
@@ -379,44 +520,50 @@
     function save(todos) { localStorage.setItem(KEY, JSON.stringify(todos)); }
 
     function createTodo(text) {
-      return {
-        id: crypto.randomUUID(),
-        text: text.trim(),
-        status: 'open',
-        summary: '',
-        tags: [],
-        createdAt: Date.now(),
-      };
+      return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
+               summary: '', tags: [], subtasks: [], collapsed: false,
+               createdAt: Date.now() };
     }
 
-    // ── Helpers ──────────────────────────────────────────────
+    function createSubtask(text) {
+      return { id: crypto.randomUUID(), text: text.trim(), done: false };
+    }
+
+    // ── Helpers ───────────────────────────────────────────────
     function esc(s) {
       return String(s).replace(/[&<>"']/g, c =>
         ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    // ── DOM refs ─────────────────────────────────────────────
-    const listEl      = document.getElementById('list');
-    const statsEl     = document.getElementById('stats');
-    const inputEl     = document.getElementById('todo-input');
-    const addBtnEl    = document.getElementById('add-btn');
-    const backdropEl  = document.getElementById('backdrop');
-    const sheetEl     = document.getElementById('sheet');
-    const editTitleEl = document.getElementById('edit-title');
-    const editSumEl   = document.getElementById('edit-summary');
-    const tagChipsEl  = document.getElementById('tag-chips');
-    const tagInputEl  = document.getElementById('tag-input');
-    const statusCtrl  = document.getElementById('status-ctrl');
+    // ── DOM refs ──────────────────────────────────────────────
+    const listEl       = document.getElementById('list');
+    const statsEl      = document.getElementById('stats');
+    const filterBarEl  = document.getElementById('filter-bar');
+    const inputEl      = document.getElementById('todo-input');
+    const addBtnEl     = document.getElementById('add-btn');
+    const backdropEl   = document.getElementById('backdrop');
+    const sheetEl      = document.getElementById('sheet');
+    const editTitleEl  = document.getElementById('edit-title');
+    const editSumEl    = document.getElementById('edit-summary');
+    const tagChipsEl   = document.getElementById('tag-chips');
+    const tagInputEl   = document.getElementById('tag-input');
+    const statusCtrl   = document.getElementById('status-ctrl');
+    const sheetSubsEl  = document.getElementById('sheet-subtasks');
+    const subInputEl   = document.getElementById('sub-input');
 
-    // ── Render ───────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────
     function render() {
-      const todos = load();
-      const closed = todos.filter(t => t.status === 'closed').length;
-      statsEl.textContent = todos.length
-        ? `${closed} of ${todos.length} closed`
+      const all    = load();
+      const shown  = activeTag ? all.filter(t => t.tags.includes(activeTag)) : all;
+      const closed = all.filter(t => t.status === 'closed').length;
+
+      statsEl.textContent = all.length
+        ? `${closed} of ${all.length} closed`
         : 'Nothing here yet';
 
-      if (!todos.length) {
+      renderFilterBar(all);
+
+      if (!shown.length) {
         listEl.innerHTML = `
           <div class="empty-state">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
@@ -424,25 +571,70 @@
               <rect x="6" y="19" width="20" height="3" rx="1.5" fill="currentColor"/>
               <rect x="6" y="28" width="24" height="3" rx="1.5" fill="currentColor"/>
             </svg>
-            <span>Add your first task below</span>
+            <span>${activeTag ? `No tasks tagged "${esc(activeTag)}"` : 'Add your first task below'}</span>
           </div>`;
         return;
       }
 
       listEl.innerHTML = '';
-      todos.forEach(t => listEl.appendChild(makeItem(t)));
+      shown.forEach(t => listEl.appendChild(makeItem(t)));
+    }
+
+    function renderFilterBar(todos) {
+      const tags = [...new Set(todos.flatMap(t => t.tags))].sort();
+      filterBarEl.innerHTML = tags.map(tag =>
+        `<button class="filter-tag${activeTag === tag ? ' active' : ''}" data-tag="${esc(tag)}">${esc(tag)}</button>`
+      ).join('');
+      filterBarEl.querySelectorAll('.filter-tag').forEach(btn =>
+        btn.addEventListener('click', () => {
+          activeTag = activeTag === btn.dataset.tag ? null : btn.dataset.tag;
+          render();
+        })
+      );
     }
 
     function makeItem(todo) {
+      const hasDetails = !!todo.summary || todo.tags.length > 0 || todo.subtasks.length > 0;
+      const isCollapsed = hasDetails && todo.collapsed;
+      const doneCount  = todo.subtasks.filter(s => s.done).length;
+      const totalCount = todo.subtasks.length;
+
       const el = document.createElement('div');
-      el.className = 'todo-item' + (todo.status === 'closed' ? ' closed' : '');
+      el.className = ['todo-item',
+        todo.status === 'closed' ? 'closed'    : '',
+        isCollapsed               ? 'collapsed' : '',
+      ].filter(Boolean).join(' ');
       el.dataset.id = todo.id;
 
+      const badgeHtml = totalCount > 0
+        ? `<span class="subtask-badge">${doneCount}/${totalCount}</span>` : '';
+
+      const collapseHtml = hasDetails
+        ? `<button class="collapse-btn" aria-expanded="${!isCollapsed}" aria-label="${isCollapsed ? 'Expand' : 'Collapse'}">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.7"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>` : '';
+
+      const sumHtml = todo.summary
+        ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
       const tagsHtml = todo.tags.length
         ? `<div class="item-tags">${todo.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>`
         : '';
-      const sumHtml = todo.summary
-        ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
+      const subtasksHtml = todo.subtasks.length
+        ? `<div class="subtask-list">
+            ${todo.subtasks.map(s => `
+              <div class="subtask-row${s.done ? ' done' : ''}" data-subtask-id="${s.id}">
+                <button class="subtask-chk" aria-label="Toggle subtask">
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4l2.5 2.5L9 1" stroke="white" stroke-width="1.8"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <span class="subtask-text">${esc(s.text)}</span>
+              </div>`).join('')}
+          </div>` : '';
 
       el.innerHTML = `
         <div class="drag-handle" aria-label="Hold to reorder">
@@ -462,8 +654,14 @@
           </svg>
         </button>
         <div class="item-body">
-          <span class="todo-text">${esc(todo.text)}</span>
-          ${sumHtml}${tagsHtml}
+          <div class="item-main">
+            <span class="todo-text">${esc(todo.text)}</span>
+            ${badgeHtml}
+            ${collapseHtml}
+          </div>
+          <div class="item-details">
+            ${sumHtml}${tagsHtml}${subtasksHtml}
+          </div>
         </div>
         <button class="del-btn" aria-label="Delete task">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -476,15 +674,25 @@
         e => onHandleDown(e, todo.id), { passive: false });
       el.querySelector('.check-btn').addEventListener('click',
         e => { e.stopPropagation(); toggleStatus(todo.id); });
-      el.querySelector('.item-body').addEventListener('click',
+      el.querySelector('.todo-text').addEventListener('click',
         () => openEdit(todo.id));
+
+      const cb = el.querySelector('.collapse-btn');
+      if (cb) cb.addEventListener('click',
+        e => { e.stopPropagation(); toggleCollapse(todo.id); });
+
       el.querySelector('.del-btn').addEventListener('click',
         e => { e.stopPropagation(); removeTodo(todo.id); });
+
+      el.querySelectorAll('.subtask-row').forEach(row =>
+        row.querySelector('.subtask-chk').addEventListener('click',
+          e => { e.stopPropagation(); toggleSubtask(todo.id, row.dataset.subtaskId); })
+      );
 
       return el;
     }
 
-    // ── Actions ──────────────────────────────────────────────
+    // ── Actions ───────────────────────────────────────────────
     function addTodo(text) {
       const todos = load();
       todos.unshift(createTodo(text));
@@ -505,16 +713,45 @@
       if (t) { Object.assign(t, fields); save(todos); render(); }
     }
 
-    // ── Drag to reorder ──────────────────────────────────────
+    // DOM-only: no full re-render for collapse/subtask toggles
+    function toggleCollapse(id) {
+      const todos = load();
+      const t = todos.find(t => t.id === id);
+      if (!t) return;
+      t.collapsed = !t.collapsed;
+      save(todos);
+      const el = listEl.querySelector(`[data-id="${id}"]`);
+      if (!el) return;
+      el.classList.toggle('collapsed', t.collapsed);
+      const cb = el.querySelector('.collapse-btn');
+      if (cb) cb.setAttribute('aria-expanded', String(!t.collapsed));
+    }
+
+    function toggleSubtask(todoId, subtaskId) {
+      const todos = load();
+      const todo = todos.find(t => t.id === todoId);
+      if (!todo) return;
+      const sub = todo.subtasks.find(s => s.id === subtaskId);
+      if (!sub) return;
+      sub.done = !sub.done;
+      save(todos);
+
+      const row = listEl.querySelector(`[data-subtask-id="${subtaskId}"]`);
+      if (row) row.classList.toggle('done', sub.done);
+
+      const doneCount = todo.subtasks.filter(s => s.done).length;
+      const badge = listEl.querySelector(`[data-id="${todoId}"] .subtask-badge`);
+      if (badge) badge.textContent = `${doneCount}/${todo.subtasks.length}`;
+    }
+
+    // ── Drag to reorder ───────────────────────────────────────
     function onHandleDown(e, id) {
       e.preventDefault();
       const sx = e.clientX, sy = e.clientY;
       let moved = false;
 
       const onMove = ev => {
-        if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) {
-          moved = true; cleanup();
-        }
+        if (Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 8) { moved = true; cleanup(); }
       };
       const cleanup = () => {
         clearTimeout(timer);
@@ -525,36 +762,25 @@
 
       window.addEventListener('pointermove', onMove, { passive: true });
       window.addEventListener('pointerup', onUp, { once: true });
-
-      const timer = setTimeout(() => {
-        cleanup();
-        if (!moved) beginDrag(id, sy);
-      }, 350);
+      const timer = setTimeout(() => { cleanup(); if (!moved) beginDrag(id, sy); }, 350);
     }
 
     function beginDrag(id, startY) {
       if (navigator.vibrate) navigator.vibrate(10);
       const itemEl = listEl.querySelector(`[data-id="${id}"]`);
       if (!itemEl) return;
-
       const rect = itemEl.getBoundingClientRect();
       const ghost = itemEl.cloneNode(true);
       ghost.removeAttribute('data-id');
       ghost.style.cssText = [
-        'position:fixed',
-        `top:${rect.top}px`,
-        `left:${rect.left}px`,
-        `width:${rect.width}px`,
-        'margin:0', 'z-index:999', 'pointer-events:none',
-        'box-shadow:0 12px 40px rgba(0,0,0,0.55)',
-        'transform:scale(1.025)', 'border-radius:14px',
-        'transition:none',
+        'position:fixed', `top:${rect.top}px`, `left:${rect.left}px`,
+        `width:${rect.width}px`, 'margin:0', 'z-index:999', 'pointer-events:none',
+        'box-shadow:0 12px 40px rgba(0,0,0,0.55)', 'transform:scale(1.025)',
+        'border-radius:14px', 'transition:none',
       ].join(';');
       document.body.appendChild(ghost);
       itemEl.classList.add('drag-source');
-
       drag = { id, itemEl, ghost, startY, ghostTop: rect.top };
-
       window.addEventListener('pointermove', onDragMove, { passive: false });
       window.addEventListener('pointerup', onDragEnd, { once: true });
     }
@@ -564,18 +790,13 @@
       e.preventDefault();
       const dy = e.clientY - drag.startY;
       drag.ghost.style.top = (drag.ghostTop + dy) + 'px';
-
       const ghostMid = drag.ghost.getBoundingClientRect().top
         + drag.ghost.getBoundingClientRect().height / 2;
       const items = [...listEl.querySelectorAll('.todo-item')];
-
       for (const item of items) {
         if (item === drag.itemEl) continue;
         const r = item.getBoundingClientRect();
-        if (ghostMid < r.top + r.height / 2) {
-          listEl.insertBefore(drag.itemEl, item);
-          return;
-        }
+        if (ghostMid < r.top + r.height / 2) { listEl.insertBefore(drag.itemEl, item); return; }
       }
       listEl.appendChild(drag.itemEl);
     }
@@ -583,29 +804,30 @@
     function onDragEnd() {
       if (!drag) return;
       window.removeEventListener('pointermove', onDragMove);
-
       const order = [...listEl.querySelectorAll('.todo-item')].map(el => el.dataset.id);
       const todos = load();
       save(order.map(id => todos.find(t => t.id === id)).filter(Boolean));
-
       drag.ghost.remove();
       drag.itemEl.classList.remove('drag-source');
       drag = null;
       render();
     }
 
-    // ── Edit sheet ───────────────────────────────────────────
+    // ── Edit sheet ────────────────────────────────────────────
     function openEdit(id) {
       const todo = load().find(t => t.id === id);
       if (!todo) return;
-      editId = id;
-      sheetTags = [...todo.tags];
-      sheetStatus = todo.status;
+      editId       = id;
+      sheetTags     = [...todo.tags];
+      sheetStatus   = todo.status;
+      sheetSubtasks = todo.subtasks.map(s => ({ ...s }));
 
       editTitleEl.value = todo.text;
-      editSumEl.value = todo.summary;
+      editSumEl.value   = todo.summary;
+      subInputEl.value  = '';
       syncStatus();
       renderChips();
+      renderSheetSubtasks();
 
       backdropEl.classList.add('open');
       sheetEl.classList.add('open');
@@ -628,10 +850,7 @@
         `<span class="tag-chip">${esc(tag)}<button class="tag-remove" data-i="${i}" aria-label="Remove">×</button></span>`
       ).join('');
       tagChipsEl.querySelectorAll('.tag-remove').forEach(btn =>
-        btn.addEventListener('click', () => {
-          sheetTags.splice(Number(btn.dataset.i), 1);
-          renderChips();
-        })
+        btn.addEventListener('click', () => { sheetTags.splice(Number(btn.dataset.i), 1); renderChips(); })
       );
     }
 
@@ -641,6 +860,42 @@
       tagInputEl.value = '';
     }
 
+    function renderSheetSubtasks() {
+      sheetSubsEl.innerHTML = sheetSubtasks.map((s, i) => `
+        <div class="sheet-sub-row${s.done ? ' done' : ''}">
+          <button class="sheet-sub-chk" data-i="${i}" aria-label="Toggle">
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4l2.5 2.5L9 1" stroke="white" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <span class="sheet-sub-text">${esc(s.text)}</span>
+          <button class="sheet-sub-del" data-i="${i}" aria-label="Delete">×</button>
+        </div>`).join('');
+      sheetSubsEl.querySelectorAll('.sheet-sub-chk').forEach(btn =>
+        btn.addEventListener('click', () => {
+          const i = Number(btn.dataset.i);
+          sheetSubtasks[i].done = !sheetSubtasks[i].done;
+          renderSheetSubtasks();
+        })
+      );
+      sheetSubsEl.querySelectorAll('.sheet-sub-del').forEach(btn =>
+        btn.addEventListener('click', () => {
+          sheetSubtasks.splice(Number(btn.dataset.i), 1);
+          renderSheetSubtasks();
+        })
+      );
+    }
+
+    function addSheetSubtask() {
+      const text = subInputEl.value.trim();
+      if (!text) return;
+      sheetSubtasks.push(createSubtask(text));
+      subInputEl.value = '';
+      renderSheetSubtasks();
+    }
+
+    // Sheet events
     document.getElementById('sheet-close').addEventListener('click', closeEdit);
     backdropEl.addEventListener('click', closeEdit);
 
@@ -657,19 +912,23 @@
         if (tagInputEl.value.trim()) addTag(tagInputEl.value);
       }
     });
-    tagInputEl.addEventListener('blur', () => {
-      if (tagInputEl.value.trim()) addTag(tagInputEl.value);
+    tagInputEl.addEventListener('blur', () => { if (tagInputEl.value.trim()) addTag(tagInputEl.value); });
+
+    subInputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addSheetSubtask(); }
     });
+    document.getElementById('sub-add-btn').addEventListener('click', addSheetSubtask);
 
     document.getElementById('sheet-save').addEventListener('click', () => {
       const title = editTitleEl.value.trim();
       if (!title) { editTitleEl.focus(); return; }
       if (tagInputEl.value.trim()) addTag(tagInputEl.value);
+      if (subInputEl.value.trim()) addSheetSubtask();
       updateTodo(editId, {
-        text: title,
-        status: sheetStatus,
+        text: title, status: sheetStatus,
         summary: editSumEl.value.trim(),
         tags: [...sheetTags],
+        subtasks: [...sheetSubtasks],
       });
       closeEdit();
     });
@@ -679,7 +938,7 @@
       closeEdit();
     });
 
-    // ── Input bar ────────────────────────────────────────────
+    // ── Input bar ─────────────────────────────────────────────
     inputEl.addEventListener('input', () => { addBtnEl.disabled = !inputEl.value.trim(); });
     inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && inputEl.value.trim()) submit(); });
     addBtnEl.addEventListener('click', submit);
@@ -692,7 +951,7 @@
       addBtnEl.disabled = true;
     }
 
-    // ── Boot ─────────────────────────────────────────────────
+    // ── Boot ──────────────────────────────────────────────────
     render();
   </script>
 </body>
