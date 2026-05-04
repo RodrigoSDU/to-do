@@ -69,7 +69,7 @@
 
     /* ── View switching ── */
     body.cal-mode #list       { display: none; }
-    body.cal-mode .filter-bar { display: none; }
+    body.cal-mode .input-bar-spacer { display: none; } /* kept for compat */
     body.cal-mode .input-bar  { display: none; }
     #cal-view { display: none; padding: 0 16px 60px; flex-direction: column; }
     body.cal-mode #cal-view   { display: flex; }
@@ -667,13 +667,13 @@
 
       document.body.classList.toggle('cal-mode', calView);
 
+      renderFilterBar(all);
+
       if (calView) {
         renderCalendar(all);
         if (calSelDate) renderCalDetail(calSelDate, all);
         return;
       }
-
-      renderFilterBar(all);
 
       const shown = activeTags.size > 0
         ? all.filter(t => t.tags.some(tag => activeTags.has(tag)))
@@ -739,6 +739,7 @@
         if (overdue) map[date].hasOverdue = true;
       };
       todos.forEach(t => {
+        if (activeTags.size > 0 && !t.tags.some(tag => activeTags.has(tag))) return;
         if (t.dueDate) bump(t.dueDate, t.dueDate < today && t.status !== 'closed');
         t.subtasks.forEach(s => {
           if (s.dueDate) bump(s.dueDate, s.dueDate < today && !s.done);
@@ -794,6 +795,7 @@
       const items = [];
 
       all.forEach(todo => {
+        if (activeTags.size > 0 && !todo.tags.some(tag => activeTags.has(tag))) return;
         if (todo.dueDate === dateStr) {
           const overdue = dueState(todo.dueDate)?.cls === 'overdue' && todo.status !== 'closed';
           items.push({ kind: 'task', todo, overdue });
@@ -813,7 +815,7 @@
       if (!items.length) {
         calDetailEl.innerHTML = `<div class="cal-detail">
           <div class="cal-detail-hdr">${esc(label)}</div>
-          <p style="font-size:0.88rem;color:var(--muted)">No tasks scheduled for this day.</p>
+          <p style="font-size:0.88rem;color:var(--muted)">${activeTags.size ? 'No matching tasks for this day.' : 'No tasks scheduled for this day.'}</p>
         </div>`;
         return;
       }
