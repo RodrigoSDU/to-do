@@ -639,8 +639,12 @@
     .today-item:hover { border-color: var(--accent); }
     .today-item.is-overdue { border-color: rgba(248,113,113,0.4); }
     .today-item.is-done { opacity: 0.5; }
-    .today-item-title { font-size: 0.95rem; font-weight: 500; line-height: 1.35; }
+    .today-item-row { display: flex; align-items: center; gap: 6px; }
+    .today-item-icon { font-size: 1rem; flex-shrink: 0; line-height: 1; }
+    .today-item-title { flex: 1; min-width: 0; font-size: 0.95rem; font-weight: 500; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .today-item.is-done .today-item-title { text-decoration: line-through; color: var(--muted); }
+    .today-item-tags { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .today-item-tags .tag { font-size: 0.68rem; padding: 1px 6px; }
     .today-item-parent { font-size: 0.75rem; color: var(--muted); margin-bottom: 3px; }
     .today-empty { text-align: center; padding: 28px 0 20px; color: var(--muted); font-size: 0.9rem; }
   </style>
@@ -2444,6 +2448,7 @@
     }
 
     function renderTodayPanel() {
+      _tagColors = loadTagColors();
       const today = todayStr();
       const all   = load();
       document.getElementById('today-panel-date').textContent =
@@ -2504,17 +2509,22 @@
         const done    = item.todo.status === 'closed';
         const overdue = item.todo.dueDate < today && !done;
         const cls = ['today-item', done ? 'is-done' : '', overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
-        const icon = item.todo.icon ? `<span style="margin-right:4px">${item.todo.icon}</span>` : '';
+        const iconHtml = item.todo.icon ? `<span class="today-item-icon">${item.todo.icon}</span>` : '';
+        const tagsHtml = item.todo.tags.length
+          ? `<div class="today-item-tags">${item.todo.tags.map(t => {
+              const p = TAG_PALETTES[_tagColors[t] || 0];
+              return `<span class="tag" style="background:${p.bg};color:${p.fg}">${esc(t)}</span>`;
+            }).join('')}</div>` : '';
         return `<div class="${cls}" data-id="${item.todo.id}">
-          <div class="today-item-title">${icon}${esc(item.todo.text)}</div>
+          <div class="today-item-row">${iconHtml}<span class="today-item-title">${esc(item.todo.text)}</span>${tagsHtml}</div>
         </div>`;
       } else {
         const done    = item.sub.done;
         const overdue = item.sub.dueDate < today && !done;
         const cls = ['today-item', done ? 'is-done' : '', overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
         return `<div class="${cls}" data-todo-id="${item.parent.id}">
+          <div class="today-item-row"><span class="today-item-title">${esc(item.sub.text)}</span></div>
           <div class="today-item-parent">↳ ${esc(item.parent.text)}</div>
-          <div class="today-item-title">${esc(item.sub.text)}</div>
         </div>`;
       }
     }
