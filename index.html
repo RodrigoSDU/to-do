@@ -35,14 +35,13 @@
 
     /* ── Header ── */
     header {
-      padding: 52px 20px 12px;
+      padding: 16px 20px 8px;
       position: sticky; top: 0;
       background: var(--bg); z-index: 10;
     }
     .header-top { display: flex; align-items: center; justify-content: space-between; }
-    header h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.5px; }
-    header h1 span { color: var(--accent); }
-    .stats { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+    .app-logo { color: var(--accent); display: flex; align-items: center; }
+    .stats { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
 
     /* View toggle button */
     .view-toggle {
@@ -514,7 +513,16 @@
 
   <header>
     <div class="header-top">
-      <h1>My <span>Todo</span></h1>
+      <div class="app-logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <circle cx="5" cy="7"  r="1.5" fill="currentColor"/>
+          <path d="M9 7h10"  stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+          <path d="M9 12h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          <circle cx="5" cy="17" r="1.5" fill="currentColor"/>
+          <path d="M9 17h7"  stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
       <div style="display:flex;gap:4px">
         <button id="hab-toggle" class="view-toggle" aria-label="Switch to habits view">
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
