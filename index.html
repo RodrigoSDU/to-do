@@ -238,15 +238,14 @@
     .cal-cell.cal-today .cal-dn { color: var(--accent); font-weight: 700; }
     .cal-cell.cal-selected { background: var(--accent); border-color: var(--accent); }
     .cal-cell.cal-selected .cal-dn { color: #fff; font-weight: 700; }
-    .cal-cell.cal-selected .cal-cnt { background: rgba(255,255,255,0.25); color: #fff; }
+    .cal-cell.cal-selected .cal-badge { background: rgba(255,255,255,0.25) !important; color: #fff !important; }
     .cal-cell:not(.cal-empty):not(.cal-selected):hover { border-color: var(--muted); }
     .cal-dn { font-size: 0.82rem; font-weight: 500; color: var(--text); line-height: 1; }
-    .cal-cnt {
-      font-size: 0.6rem; font-weight: 700;
-      background: var(--accent-dim); color: var(--accent);
-      padding: 1px 5px; border-radius: 100px; line-height: 1.4;
-      min-width: 16px; text-align: center;
-    }
+    .cal-badges { display: flex; gap: 3px; align-items: center; justify-content: center; }
+    .cal-badge { font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 100px; line-height: 1.4; min-width: 16px; text-align: center; }
+    .cal-badge-open    { background: var(--accent-dim); color: var(--accent); }
+    .cal-badge-overdue { background: rgba(248,113,113,0.15); color: var(--red); }
+    .cal-badge-done    { background: rgba(74,222,128,0.15); color: var(--green); }
 
     /* Day detail */
     .cal-detail { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
@@ -388,7 +387,7 @@
 
     /* ── Calendar overdue ── */
     .cal-cell.cal-overdue:not(.cal-selected) { border-color: rgba(248,113,113,0.35); }
-    .cal-cell.cal-overdue:not(.cal-selected) .cal-cnt { background: rgba(248,113,113,0.15); color: var(--red); }
+    .cal-cell.cal-overdue:not(.cal-selected) .cal-badge-overdue { background: rgba(248,113,113,0.22); }
     .cal-item.is-overdue:not(.is-closed):not(.is-done) { border-color: rgba(248,113,113,0.45); }
     .cal-item.is-overdue:not(.is-closed):not(.is-done) .cal-item-kind { color: var(--red); }
 
@@ -776,16 +775,17 @@
     function buildCountMap(todos) {
       const map = {};
       const today = todayStr();
-      const bump = (date, overdue) => {
-        if (!map[date]) map[date] = { count: 0, hasOverdue: false };
-        map[date].count++;
-        if (overdue) map[date].hasOverdue = true;
+      const bump = (date, isDone, isOverdue) => {
+        if (!map[date]) map[date] = { done: 0, undone: 0, hasOverdue: false };
+        if (isDone) map[date].done++;
+        else { map[date].undone++; if (isOverdue) map[date].hasOverdue = true; }
       };
       todos.forEach(t => {
         if (activeTags.size > 0 && !t.tags.some(tag => activeTags.has(tag))) return;
-        if (t.dueDate) bump(t.dueDate, t.dueDate < today && t.status !== 'closed');
+        const closed = t.status === 'closed';
+        if (t.dueDate) bump(t.dueDate, closed, !closed && t.dueDate < today);
         t.subtasks.forEach(s => {
-          if (s.dueDate) bump(s.dueDate, s.dueDate < today && !s.done);
+          if (s.dueDate) bump(s.dueDate, s.done, !s.done && s.dueDate < today);
         });
       });
       return map;
@@ -809,15 +809,21 @@
       for (let d = 1; d <= last; d++) {
         const ds    = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const entry = counts[ds];
-        const cnt   = entry ? entry.count : 0;
         const cls   = ['cal-cell',
           ds === tStr       ? 'cal-today'    : '',
           ds === calSelDate  ? 'cal-selected' : '',
           entry?.hasOverdue  ? 'cal-overdue'  : '',
         ].filter(Boolean).join(' ');
+        let badgesHtml = '';
+        if (entry) {
+          const { done, undone, hasOverdue } = entry;
+          const doneBadge  = done   > 0 ? `<span class="cal-badge cal-badge-done">${done}</span>` : '';
+          const openBadge  = undone > 0 ? `<span class="cal-badge ${hasOverdue ? 'cal-badge-overdue' : 'cal-badge-open'}">${undone}</span>` : '';
+          if (doneBadge || openBadge) badgesHtml = `<div class="cal-badges">${doneBadge}${openBadge}</div>`;
+        }
         html += `<div class="${cls}" data-date="${ds}">
           <span class="cal-dn">${d}</span>
-          ${cnt ? `<span class="cal-cnt">${cnt}</span>` : ''}
+          ${badgesHtml}
         </div>`;
       }
 
