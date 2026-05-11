@@ -399,6 +399,19 @@
     .del-confirm-yes { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.35); color: var(--red); font-size: 0.78rem; padding: 4px 10px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 500; }
     .todo-item.confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
 
+    /* ── Emoji icon ── */
+    .item-icon { font-size: 1.15rem; flex-shrink: 0; line-height: 1; margin-top: 1px; user-select: none; }
+    .icon-field { display: flex; align-items: center; gap: 8px; }
+    .icon-preview-btn { width: 44px; height: 44px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+    .icon-preview-btn:hover { border-color: var(--accent); }
+    .icon-preview-btn.empty { font-size: 1.1rem; color: var(--muted); border-style: dashed; }
+    .icon-clear-btn { font-size: 0.82rem; color: var(--muted); background: none; border: none; cursor: pointer; padding: 4px 8px; font-family: inherit; }
+    .icon-clear-btn:hover { color: var(--red); }
+    .emoji-grid { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 10px; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; }
+    .emoji-btn { width: 38px; height: 38px; border-radius: 8px; background: transparent; border: none; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; -webkit-tap-highlight-color: transparent; }
+    .emoji-btn:hover { background: var(--surface-hi); }
+    .emoji-btn.selected { background: var(--accent-dim); outline: 1px solid var(--accent); }
+
     /* ── Tag color picker ── */
     .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 10px; width: 180px; }
     .tag-color-grid { display: grid; grid-template-columns: repeat(4, 26px); gap: 8px; }
@@ -472,6 +485,14 @@
         <input id="edit-title" type="text" maxlength="280" />
       </div>
       <div class="field-group">
+        <div class="field-label">Icon <span class="optional">optional</span></div>
+        <div class="icon-field">
+          <button id="icon-preview-btn" class="icon-preview-btn empty" aria-label="Pick icon">＋</button>
+          <button id="icon-clear-btn" class="icon-clear-btn" style="display:none">Remove</button>
+        </div>
+        <div id="emoji-grid" class="emoji-grid"></div>
+      </div>
+      <div class="field-group">
         <div class="field-label">Status</div>
         <div class="seg-ctrl" id="status-ctrl">
           <button class="seg-btn active" data-val="open">Open</button>
@@ -525,6 +546,17 @@
     let sheetTags     = [];
     let sheetStatus   = 'open';
     let sheetSubtasks = [];
+    let sheetIcon     = null;
+
+    const EMOJIS = [
+      '😀','😎','🤔','😤','🥳','😴','🤩','🥶',
+      '❤️','🔥','⭐','✨','💡','⚡','🎯','🏆',
+      '📋','📝','📌','🔖','📎','🗂️','💼','📦',
+      '✅','❗','⚠️','🔴','🟡','🟢','🔵','⚫',
+      '🏠','🏢','🚗','✈️','📞','✉️','💬','👥',
+      '📅','⏰','⏳','🔄','💰','🛒','💊','💪',
+      '📚','💻','📱','🎵','🎨','🎉','🌱','🍕',
+    ];
     let _tagColors    = {};
 
     const TAG_COLOR_KEY = 'tag_colors_v1';
@@ -565,6 +597,7 @@
           if (t.summary  == null) t.summary  = '';
           if (t.collapsed == null) t.collapsed = false;
           if (t.dueDate  == null) t.dueDate  = null;
+          t.icon = t.icon ?? null;
           t.subtasks = t.subtasks.map(s => ({ dueDate: null, ...s }));
           delete t.done;
           return t;
@@ -582,7 +615,7 @@
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
                summary: '', tags: [], subtasks: [], collapsed: false,
-               dueDate: null, createdAt: Date.now() };
+               dueDate: null, icon: null, createdAt: Date.now() };
     }
 
     function createSubtask(text) {
@@ -957,6 +990,7 @@
             <path d="M1 4.5l3 3L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+        ${todo.icon ? `<span class="item-icon">${todo.icon}</span>` : ''}
         <div class="item-body">
           <div class="item-main">
             <span class="todo-text">${esc(todo.text)}</span>
@@ -1172,9 +1206,10 @@
       if (!todo) return;
       editId = id; sheetTags = [...todo.tags]; sheetStatus = todo.status;
       sheetSubtasks = todo.subtasks.map(s => ({ ...s }));
+      sheetIcon = todo.icon || null;
       editTitleEl.value = todo.text; editDueEl.value = todo.dueDate || '';
       editSumEl.value = todo.summary; subInputEl.value = '';
-      syncStatus(); renderChips(); renderSheetSubtasks();
+      syncStatus(); syncIconField(); renderChips(); renderSheetSubtasks();
       backdropEl.classList.add('open'); sheetEl.classList.add('open');
       setTimeout(() => editTitleEl.focus(), 300);
     }
@@ -1193,6 +1228,38 @@
       statusCtrl.querySelectorAll('.seg-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.val === sheetStatus));
     }
+
+    function syncIconField() {
+      const previewBtn = document.getElementById('icon-preview-btn');
+      const clearBtn   = document.getElementById('icon-clear-btn');
+      if (sheetIcon) {
+        previewBtn.textContent = sheetIcon;
+        previewBtn.classList.remove('empty');
+        clearBtn.style.display = '';
+      } else {
+        previewBtn.textContent = '＋';
+        previewBtn.classList.add('empty');
+        clearBtn.style.display = 'none';
+      }
+      renderEmojiGrid();
+    }
+
+    function renderEmojiGrid() {
+      const gridEl = document.getElementById('emoji-grid');
+      gridEl.innerHTML = EMOJIS.map(e =>
+        `<button class="emoji-btn${sheetIcon === e ? ' selected' : ''}" data-emoji="${e}">${e}</button>`
+      ).join('');
+      gridEl.querySelectorAll('.emoji-btn').forEach(btn =>
+        btn.addEventListener('click', () => {
+          sheetIcon = sheetIcon === btn.dataset.emoji ? null : btn.dataset.emoji;
+          syncIconField();
+        })
+      );
+    }
+
+    document.getElementById('icon-clear-btn').addEventListener('click', () => {
+      sheetIcon = null; syncIconField();
+    });
 
     function renderChips() {
       tagChipsEl.innerHTML = sheetTags.map((tag, i) =>
@@ -1290,7 +1357,7 @@
       if (subInputEl.value.trim()) addSheetSubtask();
       updateTodo(editId, {
         text: title, status: sheetStatus, dueDate: editDueEl.value || null,
-        summary: editSumEl.value.trim(), tags: [...sheetTags], subtasks: [...sheetSubtasks],
+        icon: sheetIcon, summary: editSumEl.value.trim(), tags: [...sheetTags], subtasks: [...sheetSubtasks],
       });
       closeEdit();
     });
