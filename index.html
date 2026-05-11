@@ -545,6 +545,46 @@
     .settings-action-btn:hover { border-color: var(--accent); color: var(--accent); }
     .settings-action-btn:active { opacity: 0.75; }
     .settings-action-btn.confirming { border-color: rgba(251,146,60,0.5); color: var(--orange); }
+
+    /* ── Light mode ── */
+    body.light-mode {
+      color-scheme: light;
+      --bg: #f4f4f8;
+      --surface: #ffffff;
+      --surface-hi: #ebebf2;
+      --border: #d8d8e8;
+      --accent: #6c5ce7;
+      --accent-dim: rgba(108,92,231,0.12);
+      --text: #1a1a2e;
+      --muted: #8080a0;
+    }
+    body.light-mode .sheet input[type="date"] { color-scheme: light; }
+    body.light-mode .sheet input[type="date"]::-webkit-calendar-picker-indicator { filter: none; opacity: 0.5; }
+    body.light-mode .sheet-sub-date { color-scheme: light; }
+    body.light-mode .sheet-sub-date::-webkit-calendar-picker-indicator { filter: none; opacity: 0.5; }
+
+    /* ── Compact mode ── */
+    body.compact #list { gap: 5px; }
+    body.compact .todo-item { padding: 8px 10px 8px 6px; }
+    body.compact .todo-text { font-size: 0.9rem; }
+    body.compact #hab-list { gap: 5px; }
+    body.compact .hab-item { padding: 7px 10px 7px 6px; }
+    body.compact .hab-name { font-size: 0.9rem; }
+
+    /* ── Toggle switch ── */
+    .settings-toggle-switch { position: relative; display: inline-block; width: 44px; height: 26px; cursor: pointer; flex-shrink: 0; }
+    .settings-toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      display: block; width: 44px; height: 26px; border-radius: 13px;
+      background: var(--border); transition: background 0.2s; position: relative;
+    }
+    .settings-toggle-switch input:checked + .toggle-track { background: var(--accent); }
+    .toggle-track::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; transition: transform 0.2s;
+    }
+    .settings-toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
   </style>
 </head>
 <body>
@@ -708,6 +748,37 @@
         <h2>Settings</h2>
         <button id="settings-close" class="sheet-close-btn" aria-label="Close">✕</button>
       </div>
+      <p class="settings-section-label">Preferences</p>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Light mode</div>
+          <div class="settings-row-desc">Switch to a light color theme.</div>
+        </div>
+        <label class="settings-toggle-switch">
+          <input type="checkbox" id="toggle-light-mode">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Compact layout</div>
+          <div class="settings-row-desc">Reduce spacing between items.</div>
+        </div>
+        <label class="settings-toggle-switch">
+          <input type="checkbox" id="toggle-compact">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Hide completed</div>
+          <div class="settings-row-desc">Don't show closed tasks in the list view.</div>
+        </div>
+        <label class="settings-toggle-switch">
+          <input type="checkbox" id="toggle-hide-completed">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
       <p class="settings-section-label">Data</p>
       <div class="settings-row">
         <div class="settings-row-info">
@@ -756,6 +827,7 @@
     const HABITS_KEY        = 'habits_v1';
     const HABIT_HISTORY_KEY = 'habit_history_v1';
     const HABIT_RESET_KEY   = 'habit_last_reset';
+    const SETTINGS_KEY      = 'settings_v1';
     const TAG_PALETTES = [
       { label: 'Slate',  swatch: '#64748b', fg: '#94a3b8', bg: 'rgba(148,163,184,0.14)' },
       { label: 'Zinc',   swatch: '#71717a', fg: '#a1a1aa', bg: 'rgba(161,161,170,0.14)' },
@@ -820,6 +892,12 @@
       try { return JSON.parse(localStorage.getItem(HABIT_HISTORY_KEY)) || {}; } catch { return {}; }
     }
     function saveHabitHistory(h) { localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(h)); }
+
+    function loadSettings() {
+      try { return { lightMode: false, compact: false, hideCompleted: false, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) }; }
+      catch { return { lightMode: false, compact: false, hideCompleted: false }; }
+    }
+    function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
     function createHabit(title) {
       return { id: crypto.randomUUID(), title: title.trim(), completedToday: false, collapsed: false };
@@ -960,18 +1038,25 @@
         return;
       }
 
-      const shown = activeTags.size > 0
+      let shown = activeTags.size > 0
         ? all.filter(t => t.tags.some(tag => activeTags.has(tag)))
         : all;
+      const hidingCompleted = loadSettings().hideCompleted;
+      if (hidingCompleted) shown = shown.filter(t => t.status !== 'closed');
 
       if (!shown.length) {
+        const emptyMsg = activeTags.size
+          ? 'No tasks match the selected tags'
+          : hidingCompleted && all.length > 0
+            ? 'All tasks are hidden or completed'
+            : 'Add your first task below';
         listEl.innerHTML = `<div class="empty-state">
           <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
             <rect x="6" y="10" width="28" height="3" rx="1.5" fill="currentColor"/>
             <rect x="6" y="19" width="20" height="3" rx="1.5" fill="currentColor"/>
             <rect x="6" y="28" width="24" height="3" rx="1.5" fill="currentColor"/>
           </svg>
-          <span>${activeTags.size ? 'No tasks match the selected tags' : 'Add your first task below'}</span>
+          <span>${emptyMsg}</span>
         </div>`;
         return;
       }
@@ -2084,6 +2169,14 @@
       if (btn._resetTimer) { clearTimeout(btn._resetTimer); btn._resetTimer = null; }
     }
 
+    function applySettings(s) {
+      document.body.classList.toggle('light-mode', !!s.lightMode);
+      document.body.classList.toggle('compact', !!s.compact);
+      document.getElementById('toggle-light-mode').checked = !!s.lightMode;
+      document.getElementById('toggle-compact').checked = !!s.compact;
+      document.getElementById('toggle-hide-completed').checked = !!s.hideCompleted;
+    }
+
     settingsToggleEl.addEventListener('click', () => {
       settingsOpen ? closeSettings() : openSettings();
     });
@@ -2098,6 +2191,7 @@
         habits: loadHabits(),
         habitHistory: loadHabitHistory(),
         habitLastReset: localStorage.getItem(HABIT_RESET_KEY) || null,
+        settings: loadSettings(),
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -2124,6 +2218,7 @@
           if (data.habits)        localStorage.setItem(HABITS_KEY,        JSON.stringify(data.habits));
           if (data.habitHistory)  localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(data.habitHistory));
           if (data.habitLastReset) localStorage.setItem(HABIT_RESET_KEY,  data.habitLastReset);
+          if (data.settings) { saveSettings(data.settings); applySettings(data.settings); }
           closeSettings();
           render();
         } catch { alert('Could not read file. Make sure it\'s a valid JSON backup.'); }
@@ -2162,8 +2257,21 @@
       if (btn._resetTimer) { clearTimeout(btn._resetTimer); btn._resetTimer = null; }
     });
 
+    ['toggle-light-mode', 'toggle-compact', 'toggle-hide-completed'].forEach(id => {
+      document.getElementById(id).addEventListener('change', e => {
+        const s = loadSettings();
+        if (id === 'toggle-light-mode')      s.lightMode      = e.target.checked;
+        else if (id === 'toggle-compact')    s.compact        = e.target.checked;
+        else                                 s.hideCompleted  = e.target.checked;
+        saveSettings(s);
+        applySettings(s);
+        render();
+      });
+    });
+
     // ── Boot ──────────────────────────────────────────────────
     checkHabitReset();
+    applySettings(loadSettings());
     render();
   </script>
 </body>
