@@ -1326,9 +1326,18 @@
 
     function toggleHabit(id) {
       const habits = loadHabits();
-      const h = habits.find(h => h.id === id);
-      if (!h) return;
-      h.completedToday = !h.completedToday;
+      const idx = habits.findIndex(h => h.id === id);
+      if (idx === -1) return;
+      const h = habits[idx];
+      const completing = !h.completedToday;
+      h.completedToday = completing;
+      habits.splice(idx, 1);
+      if (completing) {
+        const insertAt = habits.reduce((last, u, i) => !u.completedToday ? i + 1 : last, 0);
+        habits.splice(insertAt, 0, h);
+      } else {
+        habits.unshift(h);
+      }
       saveHabits(habits);
       render();
     }
