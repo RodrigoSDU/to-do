@@ -440,6 +440,7 @@
       display: flex; align-items: flex-start; gap: 8px;
       transition: border-color 0.2s;
     }
+    .hab-item.hab-confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
     .hab-drag {
       color: var(--muted); padding: 3px 3px; cursor: grab; flex-shrink: 0; margin-top: 4px;
       touch-action: none; -webkit-user-select: none; user-select: none;
@@ -458,15 +459,28 @@
     .hab-item.done-today .hab-check svg { display: block; }
     .hab-item.done-today { opacity: 0.7; }
     .hab-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .hab-header-row { display: flex; align-items: center; gap: 6px; }
     .hab-name {
-      font-size: 0.97rem; line-height: 1.3; word-break: break-word; cursor: pointer;
+      flex: 1; font-size: 0.97rem; line-height: 1.3; word-break: break-word; cursor: pointer;
     }
     .hab-name:hover { color: var(--accent); }
     .hab-item.done-today .hab-name { text-decoration: line-through; color: var(--muted); }
     .hab-name-edit {
-      background: transparent; border: none; border-bottom: 1.5px solid var(--accent);
-      color: var(--text); font-size: 0.97rem; font-family: inherit; outline: none; width: 100%;
+      flex: 1; background: transparent; border: none; border-bottom: 1.5px solid var(--accent);
+      color: var(--text); font-size: 0.97rem; font-family: inherit; outline: none;
     }
+    .hab-streak { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+    .hab-streak.active { color: var(--orange); }
+    .hab-collapse-btn {
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; padding: 2px; flex-shrink: 0;
+      display: flex; align-items: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hab-collapse-btn svg { transition: transform 0.2s; transform: rotate(180deg); }
+    .hab-item.hab-collapsed .hab-collapse-btn svg { transform: rotate(0deg); }
+    .hab-details { display: flex; flex-direction: column; gap: 6px; }
+    .hab-item.hab-collapsed .hab-details { display: none; }
     .hab-grid-wrap { display: flex; flex-direction: column; gap: 3px; }
     .hab-dow-row { display: grid; grid-template-columns: repeat(7, 12px); gap: 3px; }
     .hab-dow-lbl {
@@ -482,10 +496,7 @@
     .hab-dot.today:not(.done) { outline: 1.5px solid var(--accent); outline-offset: 1px; }
     .hab-dot.today.done { box-shadow: 0 0 0 2px rgba(74,222,128,0.3); }
     .hab-dot.future { opacity: 0.12; }
-    .hab-stats { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; font-weight: 600; }
-    .hab-streak { color: var(--muted); }
-    .hab-streak.active { color: var(--orange); }
-    .hab-total { color: var(--muted); }
+    .hab-total { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
     .hab-del {
       background: transparent; border: none; color: var(--muted);
       cursor: pointer; padding: 4px; opacity: 0; margin-top: 1px;
@@ -738,7 +749,10 @@
     function saveTagColors(c) { localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(c)); }
 
     function loadHabits() {
-      try { return JSON.parse(localStorage.getItem(HABITS_KEY)) || []; } catch { return []; }
+      try {
+        const raw = JSON.parse(localStorage.getItem(HABITS_KEY)) || [];
+        return raw.map(h => ({ collapsed: false, ...h }));
+      } catch { return []; }
     }
     function saveHabits(h) { localStorage.setItem(HABITS_KEY, JSON.stringify(h)); }
 
@@ -748,7 +762,7 @@
     function saveHabitHistory(h) { localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(h)); }
 
     function createHabit(title) {
-      return { id: crypto.randomUUID(), title: title.trim(), completedToday: false };
+      return { id: crypto.randomUUID(), title: title.trim(), completedToday: false, collapsed: false };
     }
 
     function checkHabitReset() {
@@ -1166,8 +1180,12 @@
     }
 
     function makeHabitItem(habit, history) {
+      const isCollapsed = habit.collapsed === true;
       const el = document.createElement('div');
-      el.className = 'hab-item' + (habit.completedToday ? ' done-today' : '');
+      el.className = ['hab-item',
+        habit.completedToday ? 'done-today'    : '',
+        isCollapsed           ? 'hab-collapsed' : '',
+      ].filter(Boolean).join(' ');
       el.dataset.habId = habit.id;
 
       const today = todayStr();
@@ -1194,7 +1212,7 @@
 
       const streakHtml = streak > 0
         ? `<span class="hab-streak active">🔥 ${streak}</span>`
-        : `<span class="hab-streak">0 streak</span>`;
+        : `<span class="hab-streak">0</span>`;
 
       el.innerHTML = `
         <div class="hab-drag" aria-label="Hold to reorder">
@@ -1213,13 +1231,20 @@
           </svg>
         </button>
         <div class="hab-body">
-          <span class="hab-name">${esc(habit.title)}</span>
-          <div class="hab-grid-wrap">
-            <div class="hab-dow-row">${dowHtml}</div>
-            <div class="hab-grid">${dotsHtml}</div>
-          </div>
-          <div class="hab-stats">
+          <div class="hab-header-row">
+            <span class="hab-name">${esc(habit.title)}</span>
             ${streakHtml}
+            <button class="hab-collapse-btn" aria-expanded="${!isCollapsed}">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="hab-details">
+            <div class="hab-grid-wrap">
+              <div class="hab-dow-row">${dowHtml}</div>
+              <div class="hab-grid">${dotsHtml}</div>
+            </div>
             <span class="hab-total">${total}×</span>
           </div>
         </div>
@@ -1238,6 +1263,11 @@
         btn.classList.add('popping');
         btn.addEventListener('animationend', () => btn.classList.remove('popping'), { once: true });
         setTimeout(() => toggleHabit(habit.id), 200);
+      });
+
+      el.querySelector('.hab-collapse-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        toggleHabitCollapse(habit.id);
       });
 
       el.querySelector('.hab-name').addEventListener('click', () => {
@@ -1265,7 +1295,23 @@
 
       el.querySelector('.hab-del').addEventListener('click', e => {
         e.stopPropagation();
-        removeHabit(habit.id);
+        if (el.classList.contains('hab-confirming-delete')) return;
+        el.classList.add('hab-confirming-delete');
+        const bar = document.createElement('div');
+        bar.className = 'del-confirm';
+        bar.innerHTML = `<span>Delete habit?</span>
+          <button class="del-confirm-cancel">Cancel</button>
+          <button class="del-confirm-yes">Delete</button>`;
+        el.querySelector('.hab-body').appendChild(bar);
+        let autoTimer;
+        const cancel = () => {
+          el.classList.remove('hab-confirming-delete');
+          bar.remove();
+          clearTimeout(autoTimer);
+        };
+        bar.querySelector('.del-confirm-cancel').addEventListener('click', ev => { ev.stopPropagation(); cancel(); });
+        bar.querySelector('.del-confirm-yes').addEventListener('click', ev => { ev.stopPropagation(); removeHabit(habit.id); });
+        autoTimer = setTimeout(cancel, 4000);
       });
 
       return el;
@@ -1300,6 +1346,20 @@
       const h = habits.find(h => h.id === id);
       if (h) { h.title = newTitle.trim(); saveHabits(habits); }
       renderHabits();
+    }
+
+    function toggleHabitCollapse(id) {
+      const habits = loadHabits();
+      const h = habits.find(h => h.id === id);
+      if (!h) return;
+      h.collapsed = !h.collapsed;
+      saveHabits(habits);
+      const habListEl = document.getElementById('hab-list');
+      const el = habListEl?.querySelector(`[data-hab-id="${id}"]`);
+      if (!el) return;
+      el.classList.toggle('hab-collapsed', h.collapsed);
+      const cb = el.querySelector('.hab-collapse-btn');
+      if (cb) cb.setAttribute('aria-expanded', String(!h.collapsed));
     }
 
     // ── Habits drag ───────────────────────────────────────────
