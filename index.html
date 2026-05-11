@@ -519,6 +519,32 @@
       100% { transform: scale(1); }
     }
     .hab-check.popping { animation: hab-pop 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+
+    /* ── Settings sheet ── */
+    #settings-toggle.active { color: var(--accent); background: var(--accent-dim); }
+    .settings-section-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; margin-top: 8px;
+    }
+    .settings-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 0; border-bottom: 1px solid var(--border);
+    }
+    .settings-row:last-of-type { border-bottom: none; }
+    .settings-row-info { flex: 1; }
+    .settings-row-title { font-size: 0.97rem; font-weight: 500; margin-bottom: 3px; }
+    .settings-row-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+    .settings-action-btn {
+      background: var(--surface-hi); border: 1px solid var(--border);
+      color: var(--text); font-size: 0.85rem; font-weight: 500;
+      padding: 8px 16px; border-radius: 10px; cursor: pointer;
+      font-family: inherit; white-space: nowrap; flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .settings-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .settings-action-btn:active { opacity: 0.75; }
+    .settings-action-btn.confirming { border-color: rgba(251,146,60,0.5); color: var(--orange); }
   </style>
 </head>
 <body>
@@ -536,6 +562,12 @@
         </svg>
       </div>
       <div style="display:flex;gap:4px">
+        <button id="settings-toggle" class="view-toggle" aria-label="Settings">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <circle cx="11" cy="11" r="3" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M11 2v2M11 18v2M2 11h2M18 11h2M4.93 4.93l1.41 1.41M15.66 15.66l1.41 1.41M4.93 17.07l1.41-1.41M15.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
         <button id="hab-toggle" class="view-toggle" aria-label="Switch to habits view">
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <rect x="2" y="15" width="3.5" height="5" rx="1" fill="currentColor"/>
@@ -665,6 +697,33 @@
         <button id="sheet-delete" class="btn-delete">Delete</button>
         <button id="sheet-save" class="btn-save">Save</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Settings sheet -->
+  <div id="settings-sheet" class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-grip"></div>
+    <div class="sheet-inner">
+      <div class="sheet-header">
+        <h2>Settings</h2>
+        <button id="settings-close" class="sheet-close-btn" aria-label="Close">✕</button>
+      </div>
+      <p class="settings-section-label">Data</p>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Export</div>
+          <div class="settings-row-desc">Download all todos, habits, and tag colors as a JSON backup file.</div>
+        </div>
+        <button id="export-btn" class="settings-action-btn">Export</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Import</div>
+          <div class="settings-row-desc">Restore from a backup. Replaces all current data.</div>
+        </div>
+        <button id="import-btn" class="settings-action-btn">Import</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" />
     </div>
   </div>
 
@@ -1838,7 +1897,9 @@
     }
 
     document.getElementById('sheet-close').addEventListener('click', closeEdit);
-    backdropEl.addEventListener('click', closeEdit);
+    backdropEl.addEventListener('click', () => {
+      if (settingsOpen) closeSettings(); else closeEdit();
+    });
 
     statusCtrl.addEventListener('click', e => {
       const btn = e.target.closest('.seg-btn'); if (!btn) return;
@@ -1998,6 +2059,108 @@
       const pop = document.getElementById('tag-color-pop');
       if (pop) pop.remove();
     }
+
+    // ── Settings ──────────────────────────────────────────────
+    let settingsOpen = false;
+    const settingsSheetEl = document.getElementById('settings-sheet');
+    const settingsToggleEl = document.getElementById('settings-toggle');
+
+    function openSettings() {
+      settingsOpen = true;
+      settingsToggleEl.classList.add('active');
+      backdropEl.classList.add('open');
+      settingsSheetEl.classList.add('open');
+    }
+
+    function closeSettings() {
+      settingsOpen = false;
+      settingsToggleEl.classList.remove('active');
+      backdropEl.classList.remove('open');
+      settingsSheetEl.classList.remove('open');
+      // reset import button if it was in confirming state
+      const btn = document.getElementById('import-btn');
+      btn.textContent = 'Import';
+      btn.classList.remove('confirming');
+      if (btn._resetTimer) { clearTimeout(btn._resetTimer); btn._resetTimer = null; }
+    }
+
+    settingsToggleEl.addEventListener('click', () => {
+      settingsOpen ? closeSettings() : openSettings();
+    });
+    document.getElementById('settings-close').addEventListener('click', closeSettings);
+
+    function exportData() {
+      const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        todos: load(),
+        tagColors: loadTagColors(),
+        habits: loadHabits(),
+        habitHistory: loadHabitHistory(),
+        habitLastReset: localStorage.getItem(HABIT_RESET_KEY) || null,
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `todo-backup-${todayStr()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.version || !Array.isArray(data.todos)) {
+            alert('Invalid backup file — missing expected fields.');
+            return;
+          }
+          localStorage.setItem(KEY, JSON.stringify(data.todos));
+          if (data.tagColors)     localStorage.setItem(TAG_COLOR_KEY,     JSON.stringify(data.tagColors));
+          if (data.habits)        localStorage.setItem(HABITS_KEY,        JSON.stringify(data.habits));
+          if (data.habitHistory)  localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(data.habitHistory));
+          if (data.habitLastReset) localStorage.setItem(HABIT_RESET_KEY,  data.habitLastReset);
+          closeSettings();
+          render();
+        } catch { alert('Could not read file. Make sure it\'s a valid JSON backup.'); }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('export-btn').addEventListener('click', exportData);
+
+    document.getElementById('import-btn').addEventListener('click', () => {
+      const btn = document.getElementById('import-btn');
+      if (btn._confirming) {
+        document.getElementById('import-file').click();
+        return;
+      }
+      btn._confirming = true;
+      btn.textContent = 'Confirm?';
+      btn.classList.add('confirming');
+      btn._resetTimer = setTimeout(() => {
+        btn._confirming = false;
+        btn.textContent = 'Import';
+        btn.classList.remove('confirming');
+        btn._resetTimer = null;
+      }, 3500);
+    });
+
+    document.getElementById('import-file').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      importData(file);
+      e.target.value = '';
+      const btn = document.getElementById('import-btn');
+      btn._confirming = false;
+      btn.textContent = 'Import';
+      btn.classList.remove('confirming');
+      if (btn._resetTimer) { clearTimeout(btn._resetTimer); btn._resetTimer = null; }
+    });
 
     // ── Boot ──────────────────────────────────────────────────
     checkHabitReset();
