@@ -400,7 +400,10 @@
     .todo-item.confirming-delete { border-color: rgba(248,113,113,0.35) !important; }
 
     /* ── Tag color picker ── */
-    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: grid; grid-template-columns: repeat(4, 26px); gap: 8px; }
+    .tag-color-pop { position: fixed; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 10px; width: 180px; }
+    .tag-color-grid { display: grid; grid-template-columns: repeat(4, 26px); gap: 8px; }
+    .tag-rename-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.88rem; padding: 6px 10px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+    .tag-rename-input:focus { border-color: var(--accent); }
     .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.18); }
     .tag-color-swatch:hover { transform: scale(1.18); }
     .tag-color-swatch.active { border-color: #fff; }
@@ -1318,6 +1321,22 @@
     }
 
     // ── Tag color picker ─────────────────────────────────────
+    function renameTag(oldName, newName) {
+      const todos = load();
+      todos.forEach(t => {
+        const idx = t.tags.indexOf(oldName);
+        if (idx === -1) return;
+        if (t.tags.includes(newName)) t.tags.splice(idx, 1);
+        else t.tags[idx] = newName;
+      });
+      save(todos);
+      const tc = loadTagColors();
+      if (tc[oldName] !== undefined && tc[newName] === undefined) tc[newName] = tc[oldName];
+      delete tc[oldName];
+      saveTagColors(tc);
+      if (activeTags.has(oldName)) { activeTags.delete(oldName); activeTags.add(newName); }
+    }
+
     function openTagColorPicker(tag, anchorEl) {
       closeTagColorPicker();
       const colors  = loadTagColors();
@@ -1327,6 +1346,28 @@
       pop.className = 'tag-color-pop';
       pop.id = 'tag-color-pop';
 
+      // Rename input
+      const renameInput = document.createElement('input');
+      renameInput.type = 'text';
+      renameInput.className = 'tag-rename-input';
+      renameInput.value = tag;
+      renameInput.maxLength = 30;
+      renameInput.placeholder = 'Rename tag…';
+      renameInput.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          const n = renameInput.value.trim().replace(/\s+/g, '').toLowerCase();
+          if (n && n !== tag) renameTag(tag, n);
+          closeTagColorPicker();
+          render();
+        }
+        if (e.key === 'Escape') closeTagColorPicker();
+      });
+      pop.appendChild(renameInput);
+
+      // Color grid
+      const grid = document.createElement('div');
+      grid.className = 'tag-color-grid';
       TAG_PALETTES.forEach((p, i) => {
         const sw = document.createElement('button');
         sw.className = 'tag-color-swatch' + (current === i ? ' active' : '');
@@ -1334,25 +1375,32 @@
         sw.title = p.label;
         sw.addEventListener('click', e => {
           e.stopPropagation();
+          const n = renameInput.value.trim().replace(/\s+/g, '').toLowerCase();
+          const target = (n && n !== tag) ? (renameTag(tag, n), n) : tag;
           const tc = loadTagColors();
-          if (i === 0) delete tc[tag]; else tc[tag] = i;
+          if (i === 0) delete tc[target]; else tc[target] = i;
           saveTagColors(tc);
           closeTagColorPicker();
           render();
         });
-        pop.appendChild(sw);
+        grid.appendChild(sw);
       });
+      pop.appendChild(grid);
 
       document.body.appendChild(pop);
 
       const rect = anchorEl.getBoundingClientRect();
-      const pw   = 152; /* 4*(26+8)-8 + 2*12 */
+      const pw   = 180;
       let left   = rect.left;
       if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
       pop.style.top  = (rect.bottom + 6) + 'px';
       pop.style.left = Math.max(8, left) + 'px';
 
-      setTimeout(() => document.addEventListener('pointerdown', _closePop), 50);
+      setTimeout(() => {
+        renameInput.focus();
+        renameInput.select();
+        document.addEventListener('pointerdown', _closePop);
+      }, 50);
     }
 
     function _closePop(e) {
