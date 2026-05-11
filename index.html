@@ -779,6 +779,16 @@
           <span class="toggle-track"></span>
         </label>
       </div>
+      <div class="settings-row">
+        <div class="settings-row-info">
+          <div class="settings-row-title">Weekly calendar</div>
+          <div class="settings-row-desc">Show a 7-day week view instead of the full month.</div>
+        </div>
+        <label class="settings-toggle-switch">
+          <input type="checkbox" id="toggle-cal-weekly">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
       <p class="settings-section-label">Data</p>
       <div class="settings-row">
         <div class="settings-row-info">
@@ -853,6 +863,7 @@
     let calYear  = _now.getFullYear();
     let calMonth = _now.getMonth();
     let calSelDate = null;
+    let calWeekStart = getMonday(new Date());
 
     // ── Storage ───────────────────────────────────────────────
     function load() {
@@ -894,8 +905,8 @@
     function saveHabitHistory(h) { localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(h)); }
 
     function loadSettings() {
-      try { return { lightMode: false, compact: false, hideCompleted: false, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) }; }
-      catch { return { lightMode: false, compact: false, hideCompleted: false }; }
+      try { return { lightMode: false, compact: false, hideCompleted: false, calWeekly: false, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) }; }
+      catch { return { lightMode: false, compact: false, hideCompleted: false, calWeekly: false }; }
     }
     function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
@@ -942,6 +953,13 @@
     function todayStr() {
       const t = new Date();
       return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    }
+
+    function getMonday(date) {
+      const d = new Date(date); d.setHours(0, 0, 0, 0);
+      const dow = d.getDay();
+      d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+      return d;
     }
 
     function dueState(dateStr) {
@@ -1119,44 +1137,64 @@
       return map;
     }
 
+    function buildDayCell(ds, dayNum, tStr, counts) {
+      const entry = counts[ds];
+      const cls = ['cal-cell',
+        ds === tStr       ? 'cal-today'    : '',
+        ds === calSelDate  ? 'cal-selected' : '',
+        entry?.hasOverdue  ? 'cal-overdue'  : '',
+      ].filter(Boolean).join(' ');
+      let badgesHtml = '';
+      if (entry) {
+        const { done, undone, hasOverdue } = entry;
+        const doneBadge = done   > 0 ? `<span class="cal-badge cal-badge-done">${done}</span>` : '';
+        const openBadge = undone > 0 ? `<span class="cal-badge ${hasOverdue ? 'cal-badge-overdue' : 'cal-badge-open'}">${undone}</span>` : '';
+        if (doneBadge || openBadge) badgesHtml = `<div class="cal-badges">${doneBadge}${openBadge}</div>`;
+      }
+      return `<div class="${cls}" data-date="${ds}">
+          <span class="cal-dn">${dayNum}</span>
+          ${badgesHtml}
+        </div>`;
+    }
+
     function renderCalendar(todos) {
       const all    = todos || load();
       const tStr   = todayStr();
       const counts = buildCountMap(all);
-      const first  = new Date(calYear, calMonth, 1);
-      const last   = new Date(calYear, calMonth + 1, 0).getDate();
-      const startDow = first.getDay();
+      const weekly = loadSettings().calWeekly;
+      let html = '';
 
-      calMonthLbl.textContent = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-      const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-      let html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
-
-      for (let i = 0; i < startDow; i++) html += `<div class="cal-cell cal-empty"></div>`;
-
-      for (let d = 1; d <= last; d++) {
-        const ds    = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const entry = counts[ds];
-        const cls   = ['cal-cell',
-          ds === tStr       ? 'cal-today'    : '',
-          ds === calSelDate  ? 'cal-selected' : '',
-          entry?.hasOverdue  ? 'cal-overdue'  : '',
-        ].filter(Boolean).join(' ');
-        let badgesHtml = '';
-        if (entry) {
-          const { done, undone, hasOverdue } = entry;
-          const doneBadge  = done   > 0 ? `<span class="cal-badge cal-badge-done">${done}</span>` : '';
-          const openBadge  = undone > 0 ? `<span class="cal-badge ${hasOverdue ? 'cal-badge-overdue' : 'cal-badge-open'}">${undone}</span>` : '';
-          if (doneBadge || openBadge) badgesHtml = `<div class="cal-badges">${doneBadge}${openBadge}</div>`;
+      if (weekly) {
+        const DOW_W = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+        html = DOW_W.map(d => `<div class="cal-dow">${d}</div>`).join('');
+        const wEnd = new Date(calWeekStart);
+        wEnd.setDate(calWeekStart.getDate() + 6);
+        const startStr = calWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr   = calWeekStart.getMonth() === wEnd.getMonth()
+          ? wEnd.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })
+          : wEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        calMonthLbl.textContent = `${startStr} – ${endStr}`;
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(calWeekStart);
+          d.setDate(calWeekStart.getDate() + i);
+          const ds = localDateStr(d);
+          html += buildDayCell(ds, d.getDate(), tStr, counts);
         }
-        html += `<div class="${cls}" data-date="${ds}">
-          <span class="cal-dn">${d}</span>
-          ${badgesHtml}
-        </div>`;
+      } else {
+        const first    = new Date(calYear, calMonth, 1);
+        const last     = new Date(calYear, calMonth + 1, 0).getDate();
+        const startDow = first.getDay();
+        calMonthLbl.textContent = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const DOW = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+        html = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
+        for (let i = 0; i < startDow; i++) html += `<div class="cal-cell cal-empty"></div>`;
+        for (let d = 1; d <= last; d++) {
+          const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          html += buildDayCell(ds, d, tStr, counts);
+        }
       }
 
       calGridEl.innerHTML = html;
-
       calGridEl.querySelectorAll('.cal-cell:not(.cal-empty)').forEach(cell =>
         cell.addEventListener('click', () => {
           calSelDate = cell.dataset.date;
@@ -1223,12 +1261,20 @@
     }
 
     document.getElementById('cal-prev').addEventListener('click', () => {
-      calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+      if (loadSettings().calWeekly) {
+        calWeekStart.setDate(calWeekStart.getDate() - 7);
+      } else {
+        calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+      }
       calSelDate = null; calDetailEl.innerHTML = '';
       renderCalendar();
     });
     document.getElementById('cal-next').addEventListener('click', () => {
-      calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+      if (loadSettings().calWeekly) {
+        calWeekStart.setDate(calWeekStart.getDate() + 7);
+      } else {
+        calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+      }
       calSelDate = null; calDetailEl.innerHTML = '';
       renderCalendar();
     });
@@ -2175,6 +2221,7 @@
       document.getElementById('toggle-light-mode').checked = !!s.lightMode;
       document.getElementById('toggle-compact').checked = !!s.compact;
       document.getElementById('toggle-hide-completed').checked = !!s.hideCompleted;
+      document.getElementById('toggle-cal-weekly').checked = !!s.calWeekly;
     }
 
     settingsToggleEl.addEventListener('click', () => {
@@ -2257,12 +2304,13 @@
       if (btn._resetTimer) { clearTimeout(btn._resetTimer); btn._resetTimer = null; }
     });
 
-    ['toggle-light-mode', 'toggle-compact', 'toggle-hide-completed'].forEach(id => {
+    ['toggle-light-mode', 'toggle-compact', 'toggle-hide-completed', 'toggle-cal-weekly'].forEach(id => {
       document.getElementById(id).addEventListener('change', e => {
         const s = loadSettings();
-        if (id === 'toggle-light-mode')      s.lightMode      = e.target.checked;
-        else if (id === 'toggle-compact')    s.compact        = e.target.checked;
-        else                                 s.hideCompleted  = e.target.checked;
+        if      (id === 'toggle-light-mode')   s.lightMode     = e.target.checked;
+        else if (id === 'toggle-compact')      s.compact       = e.target.checked;
+        else if (id === 'toggle-hide-completed') s.hideCompleted = e.target.checked;
+        else                                   s.calWeekly     = e.target.checked;
         saveSettings(s);
         applySettings(s);
         render();
