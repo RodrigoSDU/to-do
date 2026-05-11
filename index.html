@@ -1008,8 +1008,18 @@
     function addTodo(text) { const t = load(); t.unshift(createTodo(text)); save(t); render(); }
 
     function toggleStatus(id) {
-      const todos = load(); const t = todos.find(t => t.id === id);
-      if (t) { t.status = t.status === 'closed' ? 'open' : 'closed'; save(todos); render(); }
+      const todos = load();
+      const idx = todos.findIndex(t => t.id === id);
+      if (idx === -1) return;
+      const t = todos[idx];
+      const closing = t.status !== 'closed';
+      t.status = closing ? 'closed' : 'open';
+      if (closing) {
+        todos.splice(idx, 1);
+        const insertAt = todos.reduce((last, u, i) => u.status !== 'closed' ? i + 1 : last, 0);
+        todos.splice(insertAt, 0, t);
+      }
+      save(todos); render();
     }
 
     function removeTodo(id) { save(load().filter(t => t.id !== id)); render(); }
