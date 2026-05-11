@@ -191,6 +191,20 @@
     @media (hover: none) { .del-btn { opacity: 0.4; } }
     .del-btn:active { color: var(--red); opacity: 1; }
 
+    /* ── Pin button ── */
+    .pin-btn {
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; padding: 2px 4px; opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    }
+    .todo-item:hover .pin-btn { opacity: 1; }
+    @media (hover: none) { .pin-btn { opacity: 0.4; } }
+    .pin-btn:active { color: var(--accent); opacity: 1; }
+    .todo-item.pinned .pin-btn { opacity: 1; color: var(--accent); }
+    .todo-item.pinned .pin-icon-body { fill: currentColor; }
+    .todo-item.pinned:not(.closed) { border-color: rgba(124,106,247,0.45); }
+
     /* ── Input bar ── */
     .input-bar {
       position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -877,6 +891,7 @@
           if (t.collapsed == null) t.collapsed = false;
           if (t.dueDate  == null) t.dueDate  = null;
           t.icon = t.icon ?? null;
+          t.pinned = t.pinned ?? false;
           t.subtasks = t.subtasks.map(s => ({ dueDate: null, ...s }));
           delete t.done;
           return t;
@@ -937,7 +952,7 @@
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
                summary: '', tags: [], subtasks: [], collapsed: false,
-               dueDate: null, icon: null, createdAt: Date.now() };
+               dueDate: null, icon: null, pinned: false, createdAt: Date.now() };
     }
 
     function createSubtask(text) {
@@ -1061,6 +1076,7 @@
         : all;
       const hidingCompleted = loadSettings().hideCompleted;
       if (hidingCompleted) shown = shown.filter(t => t.status !== 'closed');
+      shown = shown.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 
       if (!shown.length) {
         const emptyMsg = activeTags.size
@@ -1628,6 +1644,7 @@
         todo.status === 'closed' ? 'closed'    : '',
         isCollapsed               ? 'collapsed' : '',
         isOverdue                 ? 'overdue'   : '',
+        todo.pinned               ? 'pinned'    : '',
       ].filter(Boolean).join(' ');
       el.dataset.id = todo.id;
 
@@ -1695,6 +1712,12 @@
           ${taskDueBadge ? `<div class="item-due">${taskDueBadge}</div>` : ''}
           <div class="item-details">${sumHtml}${tagsHtml}${subtasksHtml}</div>
         </div>
+        <button class="pin-btn" aria-label="${todo.pinned ? 'Unpin' : 'Pin to top'}">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+            <path class="pin-icon-body" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"
+              d="M6 13C6 13 1 9 1 5.5a5 5 0 0 1 10 0C11 9 6 13 6 13Z"/>
+          </svg>
+        </button>
         <button class="del-btn" aria-label="Delete task">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -1710,6 +1733,11 @@
 
       const cb = el.querySelector('.collapse-btn');
       if (cb) cb.addEventListener('click', e => { e.stopPropagation(); toggleCollapse(todo.id); });
+
+      el.querySelector('.pin-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        togglePin(todo.id);
+      });
 
       el.querySelector('.del-btn').addEventListener('click', e => {
         e.stopPropagation();
@@ -1753,17 +1781,28 @@
       const t = todos[idx];
       const closing = t.status !== 'closed';
       t.status = closing ? 'closed' : 'open';
-      todos.splice(idx, 1);
-      if (closing) {
-        const insertAt = todos.reduce((last, u, i) => u.status !== 'closed' ? i + 1 : last, 0);
-        todos.splice(insertAt, 0, t);
-      } else {
-        todos.unshift(t);
+      if (!t.pinned) {
+        todos.splice(idx, 1);
+        if (closing) {
+          const insertAt = todos.reduce((last, u, i) => u.status !== 'closed' ? i + 1 : last, 0);
+          todos.splice(insertAt, 0, t);
+        } else {
+          todos.unshift(t);
+        }
       }
       save(todos); render();
     }
 
     function removeTodo(id) { save(load().filter(t => t.id !== id)); render(); }
+
+    function togglePin(id) {
+      const todos = load();
+      const t = todos.find(t => t.id === id);
+      if (!t) return;
+      t.pinned = !t.pinned;
+      save(todos);
+      render();
+    }
 
     function updateTodo(id, fields) {
       const todos = load(); const t = todos.find(t => t.id === id);
