@@ -52,7 +52,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     .view-toggle:hover { color: var(--text); }
-    body.cal-mode .view-toggle { color: var(--accent); background: var(--accent-dim); }
+    body.cal-mode #view-toggle { color: var(--accent); background: var(--accent-dim); }
+    body.hab-mode #hab-toggle  { color: var(--accent); background: var(--accent-dim); }
 
     /* Filter bar */
     .filter-bar { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; }
@@ -73,6 +74,15 @@
     body.cal-mode .input-bar  { display: none; }
     #cal-view { display: none; padding: 0 16px 60px; flex-direction: column; }
     body.cal-mode #cal-view   { display: flex; }
+
+    body.hab-mode #list       { display: none; }
+    body.hab-mode #cal-view   { display: none; }
+    body.hab-mode .filter-bar { display: none; }
+    body.hab-mode .input-bar:not(#hab-input-bar) { display: none; }
+    #hab-view { display: none; padding: 0 16px 80px; flex-direction: column; gap: 10px; }
+    body.hab-mode #hab-view   { display: flex; }
+    #hab-input-bar { display: none; }
+    body.hab-mode #hab-input-bar { display: flex; }
 
     /* ── List ── */
     #list { flex: 1; padding: 8px 16px 120px; display: flex; flex-direction: column; gap: 8px; }
@@ -197,15 +207,15 @@
     }
     #todo-input::placeholder { color: var(--muted); }
     #todo-input:focus { border-color: var(--accent); }
-    #add-btn {
+    #add-btn, #hab-add-btn {
       width: 46px; height: 46px; border-radius: 50%;
       background: var(--accent); border: none; color: #fff;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: transform 0.12s;
       -webkit-tap-highlight-color: transparent;
     }
-    #add-btn:active { transform: scale(0.9); }
-    #add-btn:disabled { background: var(--border); cursor: default; }
+    #add-btn:active, #hab-add-btn:active { transform: scale(0.9); }
+    #add-btn:disabled, #hab-add-btn:disabled { background: var(--border); cursor: default; }
 
     /* ── Calendar ── */
     .cal-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 16px; }
@@ -419,6 +429,59 @@
     .tag-color-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid transparent; cursor: pointer; flex-shrink: 0; transition: transform 0.12s, border-color 0.12s; -webkit-tap-highlight-color: transparent; box-shadow: 0 0 0 1px rgba(255,255,255,0.18); }
     .tag-color-swatch:hover { transform: scale(1.18); }
     .tag-color-swatch.active { border-color: #fff; }
+
+    /* ── Habits ── */
+    .hab-date-hdr {
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; padding-top: 10px;
+    }
+    .hab-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 12px 12px 12px 10px;
+      display: flex; align-items: center; gap: 10px;
+      transition: border-color 0.2s;
+    }
+    .hab-check {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid var(--border); background: transparent;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hab-check svg { display: none; }
+    .hab-item.done-today .hab-check { border-color: var(--green); background: var(--green); }
+    .hab-item.done-today .hab-check svg { display: block; }
+    .hab-item.done-today { opacity: 0.7; }
+    .hab-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+    .hab-name { font-size: 0.97rem; line-height: 1.3; word-break: break-word; }
+    .hab-item.done-today .hab-name { text-decoration: line-through; color: var(--muted); }
+    .hab-footer { display: flex; align-items: center; gap: 8px; }
+    .hab-dots { display: flex; gap: 3px; align-items: center; flex: 1; flex-wrap: wrap; }
+    .hab-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--surface-hi); border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hab-dot.done { background: var(--green); border-color: var(--green); }
+    .hab-dot.today { border-color: var(--accent); }
+    .hab-dot.today.done { background: var(--green); border-color: var(--green); box-shadow: 0 0 0 2px rgba(74,222,128,0.28); }
+    .hab-streak { font-size: 0.78rem; font-weight: 600; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+    .hab-streak.active { color: var(--orange); }
+    .hab-del {
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; padding: 4px; opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+    }
+    .hab-item:hover .hab-del { opacity: 1; }
+    @media (hover: none) { .hab-del { opacity: 0.4; } }
+    .hab-del:active { color: var(--red); opacity: 1; }
+    .hab-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 70px 0;
+      color: var(--muted); font-size: 0.9rem; opacity: 0.5; text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -426,16 +489,26 @@
   <header>
     <div class="header-top">
       <h1>My <span>Todo</span></h1>
-      <button id="view-toggle" class="view-toggle" aria-label="Switch to calendar view">
-        <svg id="toggle-icon" width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <rect x="2" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M2 9h18" stroke="currentColor" stroke-width="1.6"/>
-          <path d="M7 2v4M15 2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          <circle cx="7" cy="14" r="1.2" fill="currentColor"/>
-          <circle cx="11" cy="14" r="1.2" fill="currentColor"/>
-          <circle cx="15" cy="14" r="1.2" fill="currentColor"/>
-        </svg>
-      </button>
+      <div style="display:flex;gap:4px">
+        <button id="hab-toggle" class="view-toggle" aria-label="Switch to habits view">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <rect x="2" y="15" width="3.5" height="5" rx="1" fill="currentColor"/>
+            <rect x="7.5" y="10.5" width="3.5" height="9.5" rx="1" fill="currentColor"/>
+            <rect x="13" y="6" width="3.5" height="14" rx="1" fill="currentColor"/>
+            <path d="M3.5 13.5L9 8.5l5 3.5 5-6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="view-toggle" class="view-toggle" aria-label="Switch to calendar view">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <rect x="2" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M2 9h18" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7 2v4M15 2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="7" cy="14" r="1.2" fill="currentColor"/>
+            <circle cx="11" cy="14" r="1.2" fill="currentColor"/>
+            <circle cx="15" cy="14" r="1.2" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <p class="stats" id="stats"></p>
     <div id="filter-bar" class="filter-bar"></div>
@@ -462,9 +535,24 @@
     <div id="cal-detail"></div>
   </div>
 
-  <div class="input-bar">
+  <!-- Habits view -->
+  <div id="hab-view">
+    <div class="hab-date-hdr" id="hab-date-hdr"></div>
+    <div id="hab-list"></div>
+  </div>
+
+  <div class="input-bar" id="todo-input-bar">
     <input id="todo-input" type="text" placeholder="Add a task…" maxlength="280" autocomplete="off" />
     <button id="add-btn" aria-label="Add task" disabled>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="input-bar" id="hab-input-bar">
+    <input id="hab-input" type="text" placeholder="New habit…" maxlength="100" autocomplete="off" />
+    <button id="hab-add-btn" aria-label="Add habit" disabled>
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
@@ -558,7 +646,10 @@
     ];
     let _tagColors    = {};
 
-    const TAG_COLOR_KEY = 'tag_colors_v1';
+    const TAG_COLOR_KEY     = 'tag_colors_v1';
+    const HABITS_KEY        = 'habits_v1';
+    const HABIT_HISTORY_KEY = 'habit_history_v1';
+    const HABIT_RESET_KEY   = 'habit_last_reset';
     const TAG_PALETTES = [
       { label: 'Slate',  swatch: '#64748b', fg: '#94a3b8', bg: 'rgba(148,163,184,0.14)' },
       { label: 'Zinc',   swatch: '#71717a', fg: '#a1a1aa', bg: 'rgba(161,161,170,0.14)' },
@@ -578,8 +669,8 @@
       { label: 'Pink',   swatch: '#ec4899', fg: '#f472b6', bg: 'rgba(244,114,182,0.14)' },
     ];
 
-    // Calendar state
-    let calView = false;
+    // View state: 'list' | 'cal' | 'hab'
+    let currentView = 'list';
     const _now  = new Date();
     let calYear  = _now.getFullYear();
     let calMonth = _now.getMonth();
@@ -610,6 +701,40 @@
       try { return JSON.parse(localStorage.getItem(TAG_COLOR_KEY)) || {}; } catch { return {}; }
     }
     function saveTagColors(c) { localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(c)); }
+
+    function loadHabits() {
+      try { return JSON.parse(localStorage.getItem(HABITS_KEY)) || []; } catch { return []; }
+    }
+    function saveHabits(h) { localStorage.setItem(HABITS_KEY, JSON.stringify(h)); }
+
+    function loadHabitHistory() {
+      try { return JSON.parse(localStorage.getItem(HABIT_HISTORY_KEY)) || {}; } catch { return {}; }
+    }
+    function saveHabitHistory(h) { localStorage.setItem(HABIT_HISTORY_KEY, JSON.stringify(h)); }
+
+    function createHabit(title) {
+      return { id: crypto.randomUUID(), title: title.trim(), completedToday: false };
+    }
+
+    function checkHabitReset() {
+      const lastReset = localStorage.getItem(HABIT_RESET_KEY);
+      const today = todayStr();
+      if (lastReset === today) return;
+      if (lastReset) {
+        const habits = loadHabits();
+        const history = loadHabitHistory();
+        habits.forEach(h => {
+          if (h.completedToday) {
+            if (!history[h.id]) history[h.id] = {};
+            history[h.id][lastReset] = true;
+          }
+          h.completedToday = false;
+        });
+        saveHabits(habits);
+        saveHabitHistory(history);
+      }
+      localStorage.setItem(HABIT_RESET_KEY, today);
+    }
 
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
@@ -700,18 +825,27 @@
     const calDetailEl = document.getElementById('cal-detail');
     const viewToggle  = document.getElementById('view-toggle');
 
-    // ── Render (dispatches to list or calendar) ───────────────
+    // ── Render (dispatches to list, calendar, or habits) ─────
     function render() {
-      _tagColors   = loadTagColors();
+      _tagColors = loadTagColors();
+      document.body.classList.toggle('cal-mode', currentView === 'cal');
+      document.body.classList.toggle('hab-mode', currentView === 'hab');
+
+      if (currentView === 'hab') {
+        const habits = loadHabits();
+        const done = habits.filter(h => h.completedToday).length;
+        statsEl.textContent = habits.length ? `${done} of ${habits.length} done today` : 'No habits yet';
+        renderHabits();
+        return;
+      }
+
       const all    = load();
       const closed = all.filter(t => t.status === 'closed').length;
       statsEl.textContent = all.length ? `${closed} of ${all.length} closed` : 'Nothing here yet';
 
-      document.body.classList.toggle('cal-mode', calView);
-
       renderFilterBar(all);
 
-      if (calView) {
+      if (currentView === 'cal') {
         renderCalendar(all);
         if (calSelDate) renderCalDetail(calSelDate, all);
         return;
@@ -919,11 +1053,146 @@
     </svg>`;
 
     viewToggle.addEventListener('click', () => {
-      calView = !calView;
-      viewToggle.innerHTML = calView ? LIST_ICON : CAL_ICON;
-      viewToggle.setAttribute('aria-label', calView ? 'Switch to list view' : 'Switch to calendar view');
+      currentView = currentView === 'cal' ? 'list' : 'cal';
       render();
     });
+
+    document.getElementById('hab-toggle').addEventListener('click', () => {
+      currentView = currentView === 'hab' ? 'list' : 'hab';
+      render();
+    });
+
+    // ── Habits ────────────────────────────────────────────────
+    function localDateStr(d) {
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function getLastNDays(n) {
+      const days = [];
+      const base = new Date();
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(base);
+        d.setDate(base.getDate() - i);
+        days.push(localDateStr(d));
+      }
+      return days;
+    }
+
+    function calcStreak(habitId, completedToday, history) {
+      const habHistory = history[habitId] || {};
+      const today = todayStr();
+      let streak = 0;
+      const d = new Date();
+      if (!completedToday && !habHistory[today]) d.setDate(d.getDate() - 1);
+      for (let i = 0; i < 366; i++) {
+        const ds = localDateStr(d);
+        if (!habHistory[ds] && !(ds === today && completedToday)) break;
+        streak++;
+        d.setDate(d.getDate() - 1);
+      }
+      return streak;
+    }
+
+    function renderHabits() {
+      const habListEl = document.getElementById('hab-list');
+      const dateHdrEl = document.getElementById('hab-date-hdr');
+      const today = new Date();
+      dateHdrEl.textContent = today.toLocaleDateString('en-US',
+        { weekday: 'long', month: 'long', day: 'numeric' });
+
+      const habits = loadHabits();
+      const history = loadHabitHistory();
+
+      if (!habits.length) {
+        habListEl.innerHTML = `<div class="hab-empty">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="14" stroke="currentColor" stroke-width="2"/>
+            <path d="M14 20l4 4 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Add your first habit below</span>
+        </div>`;
+        return;
+      }
+
+      habListEl.innerHTML = '';
+      habits.forEach(h => habListEl.appendChild(makeHabitItem(h, history)));
+    }
+
+    function makeHabitItem(habit, history) {
+      const el = document.createElement('div');
+      el.className = 'hab-item' + (habit.completedToday ? ' done-today' : '');
+      el.dataset.habId = habit.id;
+
+      const today = todayStr();
+      const days = getLastNDays(21);
+      const streak = calcStreak(habit.id, habit.completedToday, history);
+      const habHistory = history[habit.id] || {};
+
+      const dotsHtml = days.map(ds => {
+        const isDone = habHistory[ds] || (ds === today && habit.completedToday);
+        const isToday = ds === today;
+        const cls = ['hab-dot', isDone ? 'done' : '', isToday ? 'today' : ''].filter(Boolean).join(' ');
+        return `<div class="${cls}"></div>`;
+      }).join('');
+
+      const streakHtml = streak > 0
+        ? `<span class="hab-streak active">🔥 ${streak}</span>`
+        : `<span class="hab-streak">0 streak</span>`;
+
+      el.innerHTML = `
+        <button class="hab-check" aria-label="Mark complete">
+          <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+            <path d="M1 4.5l3 3L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="hab-body">
+          <span class="hab-name">${esc(habit.title)}</span>
+          <div class="hab-footer">
+            <div class="hab-dots">${dotsHtml}</div>
+            ${streakHtml}
+          </div>
+        </div>
+        <button class="hab-del" aria-label="Delete habit">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>`;
+
+      el.querySelector('.hab-check').addEventListener('click', e => {
+        e.stopPropagation();
+        toggleHabit(habit.id);
+      });
+      el.querySelector('.hab-del').addEventListener('click', e => {
+        e.stopPropagation();
+        removeHabit(habit.id);
+      });
+
+      return el;
+    }
+
+    function addHabit(title) {
+      const habits = loadHabits();
+      habits.unshift(createHabit(title));
+      saveHabits(habits);
+      render();
+    }
+
+    function toggleHabit(id) {
+      const habits = loadHabits();
+      const h = habits.find(h => h.id === id);
+      if (!h) return;
+      h.completedToday = !h.completedToday;
+      saveHabits(habits);
+      render();
+    }
+
+    function removeHabit(id) {
+      saveHabits(loadHabits().filter(h => h.id !== id));
+      const history = loadHabitHistory();
+      delete history[id];
+      saveHabitHistory(history);
+      render();
+    }
 
     // ── List item builder ─────────────────────────────────────
     function makeItem(todo) {
@@ -1393,6 +1662,17 @@
       addTodo(text); inputEl.value = ''; addBtnEl.disabled = true;
     }
 
+    // ── Habits input bar ──────────────────────────────────────
+    const habInputEl  = document.getElementById('hab-input');
+    const habAddBtnEl = document.getElementById('hab-add-btn');
+    habInputEl.addEventListener('input', () => { habAddBtnEl.disabled = !habInputEl.value.trim(); });
+    habInputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && habInputEl.value.trim()) submitHabit(); });
+    habAddBtnEl.addEventListener('click', submitHabit);
+    function submitHabit() {
+      const text = habInputEl.value.trim(); if (!text) return;
+      addHabit(text); habInputEl.value = ''; habAddBtnEl.disabled = true;
+    }
+
     // ── Tag color picker ─────────────────────────────────────
     function renameTag(oldName, newName) {
       const todos = load();
@@ -1490,6 +1770,7 @@
     }
 
     // ── Boot ──────────────────────────────────────────────────
+    checkHabitReset();
     render();
   </script>
 </body>
