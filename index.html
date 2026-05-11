@@ -599,6 +599,50 @@
       background: #fff; transition: transform 0.2s;
     }
     .settings-toggle-switch input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    /* ── Today panel ── */
+    #today-toggle.active { color: var(--accent); background: var(--accent-dim); }
+    .today-panel {
+      position: fixed; top: 0; left: 50%;
+      transform: translateX(-50%) translateY(-100%);
+      width: 100%; max-width: 480px;
+      background: var(--surface); border-radius: 0 0 20px 20px;
+      z-index: 51;
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 72dvh; overflow-y: auto;
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .today-panel.open { transform: translateX(-50%) translateY(0); }
+    .today-panel-inner { padding: 20px 20px 8px; }
+    .today-panel-header {
+      display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px;
+    }
+    .today-panel-title { font-size: 1.15rem; font-weight: 700; }
+    .today-panel-date { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .today-grip {
+      width: 36px; height: 4px; background: var(--border); border-radius: 2px;
+      margin: 8px auto 16px;
+    }
+    .today-section-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+    }
+    .today-section-gap { margin-top: 14px; }
+    .today-item {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 6px;
+      cursor: pointer; transition: border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .today-item:last-child { margin-bottom: 0; }
+    .today-item:hover { border-color: var(--accent); }
+    .today-item.is-overdue { border-color: rgba(248,113,113,0.4); }
+    .today-item.is-done { opacity: 0.5; }
+    .today-item-title { font-size: 0.95rem; font-weight: 500; line-height: 1.35; }
+    .today-item.is-done .today-item-title { text-decoration: line-through; color: var(--muted); }
+    .today-item-parent { font-size: 0.75rem; color: var(--muted); margin-bottom: 3px; }
+    .today-empty { text-align: center; padding: 28px 0 20px; color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -616,6 +660,12 @@
         </svg>
       </div>
       <div style="display:flex;gap:4px">
+        <button id="today-toggle" class="view-toggle" aria-label="Today's tasks">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <rect x="3" y="2" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7 7h8M7 11h8M7 15h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
         <button id="hab-toggle" class="view-toggle" aria-label="Switch to habits view">
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <rect x="2" y="15" width="3.5" height="5" rx="1" fill="currentColor"/>
@@ -689,6 +739,21 @@
         <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
     </button>
+  </div>
+
+  <!-- Today panel -->
+  <div id="today-panel" class="today-panel" role="dialog" aria-modal="true">
+    <div class="today-panel-inner">
+      <div class="today-panel-header">
+        <div>
+          <div class="today-panel-title">Today</div>
+          <div class="today-panel-date" id="today-panel-date"></div>
+        </div>
+        <button id="today-close" class="sheet-close-btn" aria-label="Close">✕</button>
+      </div>
+      <div id="today-content"></div>
+    </div>
+    <div class="today-grip"></div>
   </div>
 
   <div id="backdrop" class="backdrop"></div>
@@ -2068,7 +2133,9 @@
 
     document.getElementById('sheet-close').addEventListener('click', closeEdit);
     backdropEl.addEventListener('click', () => {
-      if (settingsOpen) closeSettings(); else closeEdit();
+      if (settingsOpen) closeSettings();
+      else if (todayOpen) closeToday();
+      else closeEdit();
     });
 
     statusCtrl.addEventListener('click', e => {
@@ -2355,6 +2422,107 @@
         render();
       });
     });
+
+    // ── Today panel ──────────────────────────────────────────
+    let todayOpen = false;
+    const todayPanelEl  = document.getElementById('today-panel');
+    const todayToggleEl = document.getElementById('today-toggle');
+
+    function openToday() {
+      todayOpen = true;
+      todayToggleEl.classList.add('active');
+      backdropEl.classList.add('open');
+      todayPanelEl.classList.add('open');
+      renderTodayPanel();
+    }
+
+    function closeToday() {
+      todayOpen = false;
+      todayToggleEl.classList.remove('active');
+      backdropEl.classList.remove('open');
+      todayPanelEl.classList.remove('open');
+    }
+
+    function renderTodayPanel() {
+      const today = todayStr();
+      const all   = load();
+      document.getElementById('today-panel-date').textContent =
+        new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+      const overdue  = [];
+      const dueToday = [];
+      all.forEach(todo => {
+        if (todo.dueDate) {
+          if (todo.dueDate < today && todo.status !== 'closed')
+            overdue.push({ kind: 'task', todo });
+          else if (todo.dueDate === today)
+            dueToday.push({ kind: 'task', todo });
+        }
+        todo.subtasks.forEach(sub => {
+          if (!sub.dueDate) return;
+          if (sub.dueDate < today && !sub.done)
+            overdue.push({ kind: 'subtask', sub, parent: todo });
+          else if (sub.dueDate === today)
+            dueToday.push({ kind: 'subtask', sub, parent: todo });
+        });
+      });
+
+      const sortItems = arr => arr.slice().sort((a, b) => {
+        const ad = a.kind === 'task' ? a.todo.status === 'closed' : a.sub.done;
+        const bd = b.kind === 'task' ? b.todo.status === 'closed' : b.sub.done;
+        return (ad ? 1 : 0) - (bd ? 1 : 0);
+      });
+
+      const contentEl = document.getElementById('today-content');
+      if (!overdue.length && !dueToday.length) {
+        contentEl.innerHTML = `<div class="today-empty">All clear — nothing due today</div>`;
+        return;
+      }
+
+      let html = '';
+      if (overdue.length) {
+        html += `<p class="today-section-label">Overdue</p>`;
+        sortItems(overdue).forEach(item => { html += buildTodayItem(item, today); });
+      }
+      if (dueToday.length) {
+        if (overdue.length) html += `<div class="today-section-gap"></div>`;
+        html += `<p class="today-section-label">Due today</p>`;
+        sortItems(dueToday).forEach(item => { html += buildTodayItem(item, today); });
+      }
+      contentEl.innerHTML = html;
+
+      contentEl.querySelectorAll('.today-item').forEach(el =>
+        el.addEventListener('click', () => {
+          closeToday();
+          openEdit(el.dataset.id || el.dataset.todoId);
+        })
+      );
+    }
+
+    function buildTodayItem(item, today) {
+      if (item.kind === 'task') {
+        const done    = item.todo.status === 'closed';
+        const overdue = item.todo.dueDate < today && !done;
+        const cls = ['today-item', done ? 'is-done' : '', overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
+        const icon = item.todo.icon ? `<span style="margin-right:4px">${item.todo.icon}</span>` : '';
+        return `<div class="${cls}" data-id="${item.todo.id}">
+          <div class="today-item-title">${icon}${esc(item.todo.text)}</div>
+        </div>`;
+      } else {
+        const done    = item.sub.done;
+        const overdue = item.sub.dueDate < today && !done;
+        const cls = ['today-item', done ? 'is-done' : '', overdue ? 'is-overdue' : ''].filter(Boolean).join(' ');
+        return `<div class="${cls}" data-todo-id="${item.parent.id}">
+          <div class="today-item-parent">↳ ${esc(item.parent.text)}</div>
+          <div class="today-item-title">${esc(item.sub.text)}</div>
+        </div>`;
+      }
+    }
+
+    todayToggleEl.addEventListener('click', () => {
+      todayOpen ? closeToday() : openToday();
+    });
+    document.getElementById('today-close').addEventListener('click', closeToday);
 
     // ── Boot ──────────────────────────────────────────────────
     checkHabitReset();
