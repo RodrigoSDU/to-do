@@ -191,18 +191,8 @@
     @media (hover: none) { .del-btn { opacity: 0.4; } }
     .del-btn:active { color: var(--red); opacity: 1; }
 
-    /* ── Pin button ── */
-    .pin-btn {
-      background: transparent; border: none; color: var(--muted);
-      cursor: pointer; padding: 2px 4px; opacity: 0;
-      transition: opacity 0.15s, color 0.15s;
-      -webkit-tap-highlight-color: transparent; flex-shrink: 0;
-    }
-    .todo-item:hover .pin-btn { opacity: 1; }
-    @media (hover: none) { .pin-btn { opacity: 0.4; } }
-    .pin-btn:active { color: var(--accent); opacity: 1; }
-    .todo-item.pinned .pin-btn { opacity: 1; color: var(--accent); }
-    .todo-item.pinned .pin-icon-body { fill: currentColor; }
+    /* ── Pin indicator ── */
+    .pin-indicator { color: var(--accent); flex-shrink: 0; display: flex; align-items: center; margin-top: 2px; }
     .todo-item.pinned:not(.closed) { border-color: rgba(124,106,247,0.45); }
 
     /* ── Input bar ── */
@@ -786,6 +776,13 @@
           <button class="seg-btn active" data-val="open">Open</button>
           <button class="seg-btn" data-val="closed">Closed</button>
         </div>
+      </div>
+      <div class="field-group" style="display:flex;align-items:center;justify-content:space-between">
+        <div class="field-label" style="margin-bottom:0">Pin to top</div>
+        <label class="settings-toggle-switch">
+          <input type="checkbox" id="edit-pinned">
+          <span class="toggle-track"></span>
+        </label>
       </div>
       <div class="field-group">
         <div class="field-label">Due Date <span class="optional">optional</span></div>
@@ -1777,16 +1774,11 @@
             <span class="todo-text">${esc(todo.text)}</span>
             ${ringHtml}
             ${collapseHtml}
+            ${todo.pinned ? `<span class="pin-indicator"><svg width="9" height="11" viewBox="0 0 12 14" fill="none"><path d="M6 13C6 13 1 9 1 5.5a5 5 0 0 1 10 0C11 9 6 13 6 13Z" fill="currentColor"/></svg></span>` : ''}
           </div>
           ${taskDueBadge ? `<div class="item-due">${taskDueBadge}</div>` : ''}
           <div class="item-details">${sumHtml}${tagsHtml}${subtasksHtml}</div>
         </div>
-        <button class="pin-btn" aria-label="${todo.pinned ? 'Unpin' : 'Pin to top'}">
-          <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-            <path class="pin-icon-body" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"
-              d="M6 13C6 13 1 9 1 5.5a5 5 0 0 1 10 0C11 9 6 13 6 13Z"/>
-          </svg>
-        </button>
         <button class="del-btn" aria-label="Delete task">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -1802,11 +1794,6 @@
 
       const cb = el.querySelector('.collapse-btn');
       if (cb) cb.addEventListener('click', e => { e.stopPropagation(); toggleCollapse(todo.id); });
-
-      el.querySelector('.pin-btn').addEventListener('click', e => {
-        e.stopPropagation();
-        togglePin(todo.id);
-      });
 
       el.querySelector('.del-btn').addEventListener('click', e => {
         e.stopPropagation();
@@ -2012,6 +1999,7 @@
       sheetIcon = todo.icon || null;
       editTitleEl.value = todo.text; editDueEl.value = todo.dueDate || '';
       editSumEl.value = todo.summary; subInputEl.value = '';
+      document.getElementById('edit-pinned').checked = !!todo.pinned;
       syncStatus(); syncIconField(); renderChips(); renderSheetSubtasks();
       backdropEl.classList.add('open'); sheetEl.classList.add('open');
       setTimeout(() => editTitleEl.focus(), 300);
@@ -2165,6 +2153,7 @@
       updateTodo(editId, {
         text: title, status: sheetStatus, dueDate: editDueEl.value || null,
         icon: sheetIcon, summary: editSumEl.value.trim(), tags: [...sheetTags], subtasks: [...sheetSubtasks],
+        pinned: document.getElementById('edit-pinned').checked,
       });
       closeEdit();
     });
