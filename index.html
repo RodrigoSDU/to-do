@@ -199,14 +199,14 @@
       background: linear-gradient(to top, var(--bg) 70%, transparent);
       display: flex; gap: 10px; align-items: center;
     }
-    #todo-input {
+    #todo-input, #hab-input {
       flex: 1; background: var(--surface); border: 1px solid var(--border);
       border-radius: 50px; color: var(--text); font-size: 1rem;
       padding: 12px 18px; outline: none; -webkit-appearance: none;
       transition: border-color 0.15s;
     }
-    #todo-input::placeholder { color: var(--muted); }
-    #todo-input:focus { border-color: var(--accent); }
+    #todo-input::placeholder, #hab-input::placeholder { color: var(--muted); }
+    #todo-input:focus, #hab-input:focus { border-color: var(--accent); }
     #add-btn, #hab-add-btn {
       width: 46px; height: 46px; border-radius: 50%;
       background: var(--accent); border: none; color: #fff;
