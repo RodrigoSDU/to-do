@@ -340,6 +340,11 @@
     #tag-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 0.9rem; outline: none; font-family: inherit; }
     #tag-input::placeholder { color: var(--muted); }
 
+    .tag-suggest { background: var(--surface-hi); border: 1px solid var(--border); border-radius: 10px; margin-top: 4px; overflow: hidden; display: none; }
+    .tag-suggest.open { display: block; }
+    .tag-suggest-item { padding: 9px 14px; font-size: 0.9rem; cursor: pointer; color: var(--text); transition: background 0.1s, color 0.1s; }
+    .tag-suggest-item:hover { background: var(--accent-dim); color: var(--accent); }
+
     #sheet-subtasks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
     .sheet-sub-row { display: flex; align-items: flex-start; gap: 8px; background: var(--bg); border-radius: 8px; padding: 8px 10px; }
     .sheet-sub-chk {
@@ -485,6 +490,7 @@
           <input id="tag-input" type="text" placeholder="Type a word, press Enter or Space"
             maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="off" />
         </div>
+        <div id="tag-suggestions" class="tag-suggest"></div>
       </div>
       <div class="field-group">
         <div class="field-label">Subtasks <span class="optional">optional</span></div>
@@ -648,8 +654,9 @@
     const editTitleEl = document.getElementById('edit-title');
     const editDueEl   = document.getElementById('edit-due');
     const editSumEl   = document.getElementById('edit-summary');
-    const tagChipsEl  = document.getElementById('tag-chips');
-    const tagInputEl  = document.getElementById('tag-input');
+    const tagChipsEl   = document.getElementById('tag-chips');
+    const tagInputEl   = document.getElementById('tag-input');
+    const tagSuggestEl = document.getElementById('tag-suggestions');
     const statusCtrl  = document.getElementById('status-ctrl');
     const sheetSubsEl = document.getElementById('sheet-subtasks');
     const subInputEl  = document.getElementById('sub-input');
@@ -1014,10 +1021,12 @@
       const t = todos[idx];
       const closing = t.status !== 'closed';
       t.status = closing ? 'closed' : 'open';
+      todos.splice(idx, 1);
       if (closing) {
-        todos.splice(idx, 1);
         const insertAt = todos.reduce((last, u, i) => u.status !== 'closed' ? i + 1 : last, 0);
         todos.splice(insertAt, 0, t);
+      } else {
+        todos.unshift(t);
       }
       save(todos); render();
     }
@@ -1195,6 +1204,27 @@
       const w = raw.trim().replace(/\s+/g, '').toLowerCase();
       if (w && !sheetTags.includes(w)) { sheetTags.push(w); renderChips(); }
       tagInputEl.value = '';
+      hideTagSuggestions();
+    }
+
+    function hideTagSuggestions() {
+      tagSuggestEl.innerHTML = '';
+      tagSuggestEl.classList.remove('open');
+    }
+
+    function showTagSuggestions(query) {
+      if (!query) { hideTagSuggestions(); return; }
+      const allTags = [...new Set(load().flatMap(t => t.tags))];
+      const q = query.toLowerCase();
+      const matches = allTags.filter(tag => tag.startsWith(q) && !sheetTags.includes(tag));
+      if (!matches.length) { hideTagSuggestions(); return; }
+      tagSuggestEl.innerHTML = matches.map(tag =>
+        `<div class="tag-suggest-item" data-tag="${esc(tag)}">${esc(tag)}</div>`
+      ).join('');
+      tagSuggestEl.classList.add('open');
+      tagSuggestEl.querySelectorAll('.tag-suggest-item').forEach(item =>
+        item.addEventListener('mousedown', e => { e.preventDefault(); addTag(item.dataset.tag); })
+      );
     }
 
     function renderSheetSubtasks() {
@@ -1239,10 +1269,15 @@
       const btn = e.target.closest('.seg-btn'); if (!btn) return;
       sheetStatus = btn.dataset.val; syncStatus();
     });
+    tagInputEl.addEventListener('input', () => showTagSuggestions(tagInputEl.value.trim()));
     tagInputEl.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { hideTagSuggestions(); return; }
       if (e.key === 'Enter' || e.key === ' ' || e.key === ',') { e.preventDefault(); if (tagInputEl.value.trim()) addTag(tagInputEl.value); }
     });
-    tagInputEl.addEventListener('blur', () => { if (tagInputEl.value.trim()) addTag(tagInputEl.value); });
+    tagInputEl.addEventListener('blur', () => {
+      setTimeout(hideTagSuggestions, 150);
+      if (tagInputEl.value.trim()) addTag(tagInputEl.value);
+    });
     subInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSheetSubtask(); } });
     document.getElementById('sub-add-btn').addEventListener('click', addSheetSubtask);
 
