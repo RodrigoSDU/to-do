@@ -381,15 +381,6 @@
     .btn-save { flex: 2; padding: 13px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
     .btn-save:active { opacity: 0.85; }
 
-    /* ── Recurrence ── */
-    .recur-badge { font-size: 0.82rem; color: var(--muted); flex-shrink: 0; margin-top: 2px; line-height: 1; opacity: 0.8; }
-    .dow-row { display: flex; gap: 5px; margin-top: 10px; }
-    .dow-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); color: var(--muted); font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s, border-color 0.15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
-    .dow-btn.on { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-    .recur-monthly-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
-    #recur-monthly-day { width: 58px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 0.97rem; padding: 8px 10px; outline: none; font-family: inherit; -webkit-appearance: none; transition: border-color 0.15s; }
-    #recur-monthly-day:focus { border-color: var(--accent); }
-
     /* ── Calendar overdue ── */
     .cal-cell.cal-overdue:not(.cal-selected) { border-color: rgba(248,113,113,0.35); }
     .cal-cell.cal-overdue:not(.cal-selected) .cal-cnt { background: rgba(248,113,113,0.15); color: var(--red); }
@@ -484,33 +475,6 @@
         <input id="edit-due" type="date" />
       </div>
       <div class="field-group">
-        <div class="field-label">Repeat <span class="optional">optional</span></div>
-        <div class="seg-ctrl" id="recur-ctrl">
-          <button class="seg-btn active" data-val="none">None</button>
-          <button class="seg-btn" data-val="daily">Daily</button>
-          <button class="seg-btn" data-val="weekly">Weekly</button>
-          <button class="seg-btn" data-val="monthly">Monthly</button>
-        </div>
-        <div id="recur-weekly" style="display:none">
-          <div class="dow-row">
-            <button class="dow-btn" data-dow="0">S</button>
-            <button class="dow-btn" data-dow="1">M</button>
-            <button class="dow-btn" data-dow="2">T</button>
-            <button class="dow-btn" data-dow="3">W</button>
-            <button class="dow-btn" data-dow="4">T</button>
-            <button class="dow-btn" data-dow="5">F</button>
-            <button class="dow-btn" data-dow="6">S</button>
-          </div>
-        </div>
-        <div id="recur-monthly" style="display:none">
-          <div class="recur-monthly-row">
-            <span>Day</span>
-            <input id="recur-monthly-day" type="number" min="1" max="31" value="1" />
-            <span>of every month</span>
-          </div>
-        </div>
-      </div>
-      <div class="field-group">
         <div class="field-label">Summary <span class="optional">optional</span></div>
         <textarea id="edit-summary" rows="3" placeholder="Add more context…"></textarea>
       </div>
@@ -552,7 +516,6 @@
     let sheetTags     = [];
     let sheetStatus   = 'open';
     let sheetSubtasks = [];
-    let sheetRecur    = null;
     let _tagColors    = {};
 
     const TAG_COLOR_KEY = 'tag_colors_v1';
@@ -593,7 +556,6 @@
           if (t.summary  == null) t.summary  = '';
           if (t.collapsed == null) t.collapsed = false;
           if (t.dueDate  == null) t.dueDate  = null;
-          if (t.recur    == null) t.recur    = null;
           t.subtasks = t.subtasks.map(s => ({ dueDate: null, ...s }));
           delete t.done;
           return t;
@@ -611,7 +573,7 @@
     function createTodo(text) {
       return { id: crypto.randomUUID(), text: text.trim(), status: 'open',
                summary: '', tags: [], subtasks: [], collapsed: false,
-               dueDate: null, recur: null, createdAt: Date.now() };
+               dueDate: null, createdAt: Date.now() };
     }
 
     function createSubtask(text) {
@@ -627,30 +589,6 @@
     function todayStr() {
       const t = new Date();
       return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-    }
-
-    function fmtDate(d) {
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-
-    function nextRecurDate(recur, fromStr) {
-      const s = fromStr || todayStr();
-      const [y, m, d] = s.split('-').map(Number);
-      const base = new Date(y, m - 1, d);
-      if (recur.type === 'daily') {
-        const n = new Date(base); n.setDate(n.getDate() + 1); return fmtDate(n);
-      }
-      if (recur.type === 'weekly' && recur.days.length) {
-        const sorted = [...recur.days].sort((a, b) => a - b);
-        for (let i = 1; i <= 7; i++) {
-          const n = new Date(base); n.setDate(n.getDate() + i);
-          if (sorted.includes(n.getDay())) return fmtDate(n);
-        }
-      }
-      if (recur.type === 'monthly') {
-        return fmtDate(new Date(base.getFullYear(), base.getMonth() + 1, recur.day));
-      }
-      return null;
     }
 
     function dueState(dateStr) {
@@ -715,14 +653,10 @@
     const statusCtrl  = document.getElementById('status-ctrl');
     const sheetSubsEl = document.getElementById('sheet-subtasks');
     const subInputEl  = document.getElementById('sub-input');
-    const calGridEl        = document.getElementById('cal-grid');
-    const calMonthLbl      = document.getElementById('cal-month-lbl');
-    const calDetailEl      = document.getElementById('cal-detail');
-    const viewToggle       = document.getElementById('view-toggle');
-    const recurCtrl        = document.getElementById('recur-ctrl');
-    const recurWeeklyEl    = document.getElementById('recur-weekly');
-    const recurMonthlyEl   = document.getElementById('recur-monthly');
-    const recurMonthlyDay  = document.getElementById('recur-monthly-day');
+    const calGridEl   = document.getElementById('cal-grid');
+    const calMonthLbl = document.getElementById('cal-month-lbl');
+    const calDetailEl = document.getElementById('cal-detail');
+    const viewToggle  = document.getElementById('view-toggle');
 
     // ── Render (dispatches to list or calendar) ───────────────
     function render() {
@@ -968,7 +902,6 @@
           </button>` : '';
 
       const taskDueBadge = dueBadge(todo.dueDate);
-      const recurIcon = todo.recur ? `<span class="recur-badge" title="Repeats ${todo.recur.type}">↻</span>` : '';
       const sumHtml  = todo.summary ? `<p class="item-summary">${esc(todo.summary)}</p>` : '';
       const tagsHtml = todo.tags.length
         ? `<div class="item-tags">${todo.tags.map(t => {
@@ -1017,7 +950,6 @@
         <div class="item-body">
           <div class="item-main">
             <span class="todo-text">${esc(todo.text)}</span>
-            ${recurIcon}
             ${ringHtml}
             ${collapseHtml}
           </div>
@@ -1077,16 +1009,7 @@
 
     function toggleStatus(id) {
       const todos = load(); const t = todos.find(t => t.id === id);
-      if (!t) return;
-      const closing = t.status !== 'closed';
-      if (closing && t.recur) {
-        const next = nextRecurDate(t.recur, t.dueDate);
-        t.dueDate = next;
-        t.subtasks = t.subtasks.map(s => ({ ...s, done: false }));
-        save(todos); render(); return;
-      }
-      t.status = closing ? 'closed' : 'open';
-      save(todos); render();
+      if (t) { t.status = t.status === 'closed' ? 'open' : 'closed'; save(todos); render(); }
     }
 
     function removeTodo(id) { save(load().filter(t => t.id !== id)); render(); }
@@ -1227,10 +1150,9 @@
       if (!todo) return;
       editId = id; sheetTags = [...todo.tags]; sheetStatus = todo.status;
       sheetSubtasks = todo.subtasks.map(s => ({ ...s }));
-      sheetRecur = todo.recur ? { ...todo.recur, days: todo.recur.days ? [...todo.recur.days] : undefined } : null;
       editTitleEl.value = todo.text; editDueEl.value = todo.dueDate || '';
       editSumEl.value = todo.summary; subInputEl.value = '';
-      syncStatus(); syncRecurField(); renderChips(); renderSheetSubtasks();
+      syncStatus(); renderChips(); renderSheetSubtasks();
       backdropEl.classList.add('open'); sheetEl.classList.add('open');
       setTimeout(() => editTitleEl.focus(), 300);
     }
@@ -1249,43 +1171,6 @@
       statusCtrl.querySelectorAll('.seg-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.val === sheetStatus));
     }
-
-    function syncRecurField() {
-      const type = sheetRecur?.type || 'none';
-      recurCtrl.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.val === type));
-      recurWeeklyEl.style.display  = type === 'weekly'  ? '' : 'none';
-      recurMonthlyEl.style.display = type === 'monthly' ? '' : 'none';
-      if (type === 'weekly') {
-        const days = sheetRecur?.days || [];
-        recurWeeklyEl.querySelectorAll('.dow-btn').forEach(btn =>
-          btn.classList.toggle('on', days.includes(Number(btn.dataset.dow))));
-      }
-      if (type === 'monthly') recurMonthlyDay.value = sheetRecur?.day || 1;
-    }
-
-    recurCtrl.addEventListener('click', e => {
-      const btn = e.target.closest('.seg-btn'); if (!btn) return;
-      const val = btn.dataset.val;
-      if      (val === 'none')    sheetRecur = null;
-      else if (val === 'daily')   sheetRecur = { type: 'daily' };
-      else if (val === 'weekly')  sheetRecur = { type: 'weekly', days: [] };
-      else if (val === 'monthly') sheetRecur = { type: 'monthly', day: 1 };
-      syncRecurField();
-    });
-
-    recurWeeklyEl.addEventListener('click', e => {
-      const btn = e.target.closest('.dow-btn'); if (!btn || !sheetRecur) return;
-      const dow = Number(btn.dataset.dow);
-      const days = sheetRecur.days;
-      const idx = days.indexOf(dow);
-      idx >= 0 ? days.splice(idx, 1) : days.push(dow);
-      syncRecurField();
-    });
-
-    recurMonthlyDay.addEventListener('input', () => {
-      if (sheetRecur?.type === 'monthly')
-        sheetRecur.day = Math.min(31, Math.max(1, parseInt(recurMonthlyDay.value) || 1));
-    });
 
     function renderChips() {
       tagChipsEl.innerHTML = sheetTags.map((tag, i) =>
@@ -1358,7 +1243,6 @@
       updateTodo(editId, {
         text: title, status: sheetStatus, dueDate: editDueEl.value || null,
         summary: editSumEl.value.trim(), tags: [...sheetTags], subtasks: [...sheetSubtasks],
-        recur: sheetRecur,
       });
       closeEdit();
     });
