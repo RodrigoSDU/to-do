@@ -435,10 +435,21 @@
     .tag-color-swatch.active { border-color: #fff; }
 
     /* ── Habits ── */
-    .hab-date-hdr {
-      font-size: 0.78rem; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.08em; padding-top: 10px;
+    .hab-month-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 2px 6px;
     }
+    .hab-month-lbl {
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hab-month-btn {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 4px 6px; border-radius: 6px; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hab-month-btn:hover { color: var(--text); background: var(--surface-hi); }
+    .hab-dot-empty { visibility: hidden; }
     .hab-item {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r); padding: 10px 12px 10px 8px;
@@ -721,7 +732,19 @@
 
   <!-- Habits view -->
   <div id="hab-view">
-    <div class="hab-date-hdr" id="hab-date-hdr"></div>
+    <div class="hab-month-nav">
+      <button class="hab-month-btn" id="hab-prev" aria-label="Previous month">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <span class="hab-month-lbl" id="hab-month-lbl"></span>
+      <button class="hab-month-btn" id="hab-next" aria-label="Next month">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
     <div id="hab-list"></div>
   </div>
 
@@ -1398,20 +1421,23 @@
       return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
 
+    let habYear  = new Date().getFullYear();
+    let habMonth = new Date().getMonth(); // 0-based
+
     function getHabitGrid() {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
       const todayDs = todayStr();
-      const dow = now.getDay(); // 0=Sun…6=Sat
-      const daysFromMonday = dow === 0 ? 6 : dow - 1;
-      const start = new Date(now);
-      start.setDate(now.getDate() - daysFromMonday - 21); // Monday 3 weeks back
+      const first = new Date(habYear, habMonth, 1);
+      const last  = new Date(habYear, habMonth + 1, 0).getDate();
+      const startDow = first.getDay();
+      const startOffset = startDow === 0 ? 6 : startDow - 1; // Monday-first
       const cells = [];
-      for (let i = 0; i < 28; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const ds = localDateStr(d);
-        cells.push({ ds, isWeekend: i % 7 >= 5, isFuture: ds > todayDs, isToday: ds === todayDs });
+      for (let i = 0; i < startOffset; i++)
+        cells.push({ ds: null, isEmpty: true, isWeekend: false, isFuture: false, isToday: false });
+      for (let d = 1; d <= last; d++) {
+        const ds = `${habYear}-${String(habMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dow = new Date(habYear, habMonth, d).getDay();
+        cells.push({ ds, isEmpty: false, isWeekend: dow === 0 || dow === 6,
+                     isFuture: ds > todayDs, isToday: ds === todayDs });
       }
       return cells;
     }
@@ -1438,10 +1464,9 @@
 
     function renderHabits() {
       const habListEl = document.getElementById('hab-list');
-      const dateHdrEl = document.getElementById('hab-date-hdr');
-      const today = new Date();
-      dateHdrEl.textContent = today.toLocaleDateString('en-US',
-        { weekday: 'long', month: 'long', day: 'numeric' });
+      const monthLblEl = document.getElementById('hab-month-lbl');
+      monthLblEl.textContent = new Date(habYear, habMonth, 1)
+        .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
       const habits = loadHabits();
       const history = loadHabitHistory();
@@ -1481,7 +1506,8 @@
         `<span class="hab-dow-lbl${i >= 5 ? ' weekend' : ''}">${l}</span>`
       ).join('');
 
-      const dotsHtml = cells.map(({ ds, isWeekend, isFuture, isToday }) => {
+      const dotsHtml = cells.map(({ ds, isEmpty, isWeekend, isFuture, isToday }) => {
+        if (isEmpty) return `<div class="hab-dot hab-dot-empty"></div>`;
         const isDone = habHistory[ds] || (ds === today && habit.completedToday);
         const cls = ['hab-dot',
           isWeekend && !isDone ? 'weekend' : '',
@@ -2191,6 +2217,16 @@
       const text = inputEl.value.trim(); if (!text) return;
       addTodo(text); inputEl.value = ''; addBtnEl.disabled = true;
     }
+
+    // ── Habits month navigation ───────────────────────────────
+    document.getElementById('hab-prev').addEventListener('click', () => {
+      if (habMonth === 0) { habYear--; habMonth = 11; } else { habMonth--; }
+      renderHabits();
+    });
+    document.getElementById('hab-next').addEventListener('click', () => {
+      if (habMonth === 11) { habYear++; habMonth = 0; } else { habMonth++; }
+      renderHabits();
+    });
 
     // ── Habits input bar ──────────────────────────────────────
     const habInputEl  = document.getElementById('hab-input');
