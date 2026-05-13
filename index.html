@@ -592,6 +592,14 @@
 
     /* ── Today panel ── */
     #today-toggle.active { color: var(--accent); background: var(--accent-dim); }
+    #today-toggle { position: relative; }
+    #today-toggle::after {
+      content: ''; position: absolute; top: 4px; right: 4px;
+      width: 7px; height: 7px; border-radius: 50%;
+      border: 1.5px solid var(--bg); pointer-events: none; display: none;
+    }
+    #today-toggle.has-due::after      { display: block; background: var(--accent); }
+    #today-toggle.has-overdue::after  { display: block; background: var(--red); }
     .today-panel {
       position: fixed; top: 0; left: 50%;
       transform: translateX(-50%) translateY(-100%);
@@ -1116,6 +1124,7 @@
       _tagColors = loadTagColors();
       document.body.classList.toggle('cal-mode', currentView === 'cal');
       document.body.classList.toggle('hab-mode', currentView === 'hab');
+      updateTodayDot();
 
       if (currentView === 'hab') {
         const habits = loadHabits();
@@ -2516,6 +2525,27 @@
           <div class="today-item-parent">↳ ${esc(item.parent.text)}</div>
         </div>`;
       }
+    }
+
+    function updateTodayDot() {
+      const today = todayStr();
+      const all   = load();
+      let hasOverdue = false, hasDueToday = false;
+      outer: for (const todo of all) {
+        if (todo.dueDate && todo.status !== 'closed') {
+          if (todo.dueDate < today) { hasOverdue = true; break outer; }
+          if (todo.dueDate === today) hasDueToday = true;
+        }
+        for (const sub of todo.subtasks) {
+          if (sub.dueDate && !sub.done) {
+            if (sub.dueDate < today) { hasOverdue = true; break outer; }
+            if (sub.dueDate === today) hasDueToday = true;
+          }
+        }
+      }
+      const btn = document.getElementById('today-toggle');
+      btn.classList.toggle('has-overdue', hasOverdue);
+      btn.classList.toggle('has-due', !hasOverdue && hasDueToday);
     }
 
     todayToggleEl.addEventListener('click', () => {
